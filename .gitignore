@@ -1,4 +1,6 @@
 output/
 multirun/
 outputs/
+wandb/
 .env
+__pycache__/

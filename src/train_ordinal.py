@@ -515,6 +515,7 @@ for fold in [0,1,2,3]:
     curr_best_score = main(fold, cfg.seed, best_score)
 
 cv = float(calc_oof()['mcrmse'])
+
 cfg.use_wandb = False
 if cfg.train_whole_dataset:
     train_whole_dataset()
@@ -537,7 +538,7 @@ api.upload_folder(
 subprocess.run(["kaggle", "datasets", "init", "-p", cfg.output_dir], check=True)
 kaggle_dataset_metadata = {
   "title": f"commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}",
-  "id": f"jashdalvi99/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", ""),
+  "id": f"jashdalvi99/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", "-"),
   "licenses": [
     {
       "name": "CC0-1.0"
@@ -554,6 +555,3 @@ subprocess.run(["kaggle", "datasets", "create", "-p", cfg.output_dir], check=Tru
 shutil.rmtree(cfg.output_dir)
 # Remove the local wandb dir to save some space
 shutil.rmtree("wandb")
-
-
-
