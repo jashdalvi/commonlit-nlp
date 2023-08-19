@@ -1,0 +1,4 @@
+output/
+multirun/
+outputs/
+.env
