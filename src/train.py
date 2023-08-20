@@ -41,6 +41,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 # Initialize hydra
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
+# Dict for best models
+best_models_dict = dict()
+
 @hydra.main(config_path="config", config_name="config")
 def main(cfg: DictConfig):
 
@@ -210,7 +213,6 @@ def main(cfg: DictConfig):
     def get_grouped_parameters(model, num_train_steps):
         """get optimizer and scheduler"""
         no_decay = ["bias", "LayerNorm.weight"]
-        print("parameter names of the model")
         optimizer_params = [
             {
                 "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and "transformer" not in n],
@@ -342,7 +344,6 @@ def main(cfg: DictConfig):
         all_outputs = np.vstack(all_outputs)
         return all_outputs
 
-    best_models_dict = dict()
 
     def get_full_text(row, sep_token):
         columns = ["prompt_title","prompt_question", "text"]
@@ -412,7 +413,7 @@ def main(cfg: DictConfig):
         
         # Preparing the model
         model = Model(cfg.model_name)
-        # model = model.to(cfg.device)
+        model = model.to(cfg.device)
         if cfg.use_wandb:
             wandb.watch(model)
         

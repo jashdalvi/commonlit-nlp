@@ -41,6 +41,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 # Initialize hydra
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
+# Dict for best models
+best_models_dict = dict()
+
+
 @hydra.main(config_path="config", config_name="config_ordinal")
 def main(cfg: DictConfig):
 
@@ -284,7 +288,7 @@ def main(cfg: DictConfig):
         all_outputs = np.vstack(all_outputs)
         return all_outputs
 
-    best_models_dict = dict()
+    
 
     def get_full_text(row, sep_token):
         columns = ["prompt_title","prompt_question", "text"]
