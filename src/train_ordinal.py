@@ -110,6 +110,9 @@ def main(cfg: DictConfig):
             
             text = self.texts[idx]
             targets = self.targets[idx]
+            if isinstance(targets, float):
+                targets = [targets]
+
             encoding = self.tokenizer(text, add_special_tokens = True, max_length = cfg.max_len, padding = False, truncation = 'longest_first') 
             
             return {
@@ -297,7 +300,7 @@ def main(cfg: DictConfig):
         row["full_text"] = full_text
         return row
 
-    def main_fold(fold, seed, best_score):
+    def main_fold(fold, seed, best_score, target):
         """Main loop"""
         # Seed everything
         seed_everything(seed=seed)
@@ -336,8 +339,8 @@ def main(cfg: DictConfig):
     #     valid_texts = valid_df["text"].to_list()
         train_texts = train_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
         valid_texts = valid_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
-        train_targets = train_df[list(cfg.target_columns)].values.tolist()
-        valid_targets = valid_df[list(cfg.target_columns)].values.tolist()
+        train_targets = train_df[target].values.tolist()
+        valid_targets = valid_df[target].values.tolist()
 
         # Preparing the datasets and dataloaders
         collate_fn = Collate(tokenizer)
@@ -383,80 +386,25 @@ def main(cfg: DictConfig):
             if cfg.use_wandb:
                 wandb.log({"valid/train_loss_avg": train_loss, 
                         "valid/valid_loss_avg": valid_loss, 
-                        "valid/mcrmse": valid_score["mcrmse"],
-                        "valid/content_rmse": valid_score["content_rmse"],
-                        "valid/wording_rmse": valid_score["wording_rmse"], 
+                        f"valid/{target}_mcrmse": valid_score["mcrmse"], 
                         "valid/step": epoch})
             
             if valid_score["mcrmse"] < best_score:
                 best_score = valid_score["mcrmse"]
                 if cfg.multi_gpu:
-                    save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_fold{fold}_seed{cfg.seed}.bin")
+                    save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_{target}_fold{fold}_seed{cfg.seed}.bin")
                     torch.save(model.module.state_dict(), save_file_path)
-                    best_models_dict[fold] = save_file_path
+                    best_models_dict[f"{target}{fold}"] = save_file_path
                 else:
-                    save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_fold{fold}_seed{cfg.seed}.bin")
+                    save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_{target}_fold{fold}_seed{cfg.seed}.bin")
                     torch.save(model.state_dict(), save_file_path)
-                    best_models_dict[fold] = save_file_path
+                    best_models_dict[f"{target}{fold}"] = save_file_path
         
         if cfg.use_wandb:
             run.finish()
         
         torch.cuda.empty_cache()
         return best_score
-
-    def train_whole_dataset():
-        """Main loop for training on the whole dataset"""
-        # Seed everything
-        seed_everything(seed=cfg.seed)
-        pdf = pd.read_csv(cfg.train_prompt_file)
-        sdf = pd.read_csv(cfg.train_summary_file)
-        df = pdf.merge(sdf, on="prompt_id")
-
-        tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
-        sep_token = tokenizer.sep_token
-
-        # Preparing the train texts and targets
-    #     texts = df["text"].to_list()
-        texts = df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
-        targets = df[list(cfg.target_columns)].values.tolist()
-
-        # Preparing the datasets and dataloaders
-        collate_fn = Collate(tokenizer)
-        train_ds = Dataset(texts, targets, tokenizer)
-
-        train_loader = torch.utils.data.DataLoader(
-            train_ds, 
-            batch_size = cfg.batch_size, 
-            shuffle = True, 
-            collate_fn = collate_fn)
-        
-        # Preparing the model
-        model = Model(cfg.model_name)
-        model = model.to(cfg.device)
-        
-        if cfg.multi_gpu:
-            model = nn.DataParallel(model)
-        
-        num_train_steps = int(len(train_ds) / cfg.batch_size / cfg.gradient_accumulation_steps * cfg.epochs)
-
-        if cfg.multi_gpu:
-            optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
-        else:
-            optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
-
-        scaler = GradScaler()
-        # Training loop
-        for epoch in range(cfg.epochs):
-            train_loss = train(epoch, model, train_loader, optimizer, scheduler, cfg.device, scaler)
-        
-        if cfg.multi_gpu:
-            save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_all_fold_seed{cfg.seed}.bin")
-            torch.save(model.module.state_dict(), save_file_path)
-        else:
-            save_file_path = os.path.join(cfg.output_dir, f"{cfg.model_name.split(os.path.sep)[-1]}_all_fold_seed{cfg.seed}.bin")
-            torch.save(model.state_dict(), save_file_path)
-        torch.cuda.empty_cache()
 
 
     def calc_oof():
@@ -478,34 +426,36 @@ def main(cfg: DictConfig):
         tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
         sep_token = tokenizer.sep_token
         
+        
         for fold in [0,1,2,3]:
-            index = df[df["fold"] == fold].index
-            test_df = df[df["fold"] == fold].reset_index(drop=True)
-    #         test_texts = test_df["text"].to_list()
-            test_texts = test_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
-            test_targets = test_df[list(cfg.target_columns)].values.tolist()
-            
-            # Preparing the model
-            model = Model(cfg.model_name)
-            model.load_state_dict(torch.load(best_models_dict[fold], map_location = "cpu"))
-            model = model.to(cfg.device)
-            tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
-            
-            if cfg.multi_gpu:
-                model = nn.DataParallel(model)
-            
-            # Preparing the datasets and dataloaders
-            collate_fn = Collate(tokenizer)
-            test_ds = Dataset(test_texts, test_targets, tokenizer)
-            test_loader = torch.utils.data.DataLoader(
-                            test_ds,
-                            batch_size = cfg.batch_size,
-                            shuffle = False,
-                            collate_fn = collate_fn,
-                            drop_last = False)
-            all_outputs = predict(model, test_loader, cfg.device)
-            
-            oof_df.loc[index, list(cfg.target_columns)] = all_outputs
+            for target in cfg.target_columns:
+                index = df[df["fold"] == fold].index
+                test_df = df[df["fold"] == fold].reset_index(drop=True)
+        #         test_texts = test_df["text"].to_list()
+                test_texts = test_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
+                test_targets = test_df[target].values.tolist()
+                
+                # Preparing the model
+                model = Model(cfg.model_name)
+                model.load_state_dict(torch.load(best_models_dict[f"{target}{fold}"], map_location = "cpu"))
+                model = model.to(cfg.device)
+                tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
+                
+                if cfg.multi_gpu:
+                    model = nn.DataParallel(model)
+                
+                # Preparing the datasets and dataloaders
+                collate_fn = Collate(tokenizer)
+                test_ds = Dataset(test_texts, test_targets, tokenizer)
+                test_loader = torch.utils.data.DataLoader(
+                                test_ds,
+                                batch_size = cfg.batch_size,
+                                shuffle = False,
+                                collate_fn = collate_fn,
+                                drop_last = False)
+                all_outputs = predict(model, test_loader, cfg.device)
+                
+                oof_df.loc[index, target] = all_outputs.reshape(-1)
         
         # Calculating the score on the oof df and then saving the oof df
         test_score = compute_mcrmse(oof_df[list(cfg.target_columns)].values, df[list(cfg.target_columns)].values)
@@ -515,16 +465,15 @@ def main(cfg: DictConfig):
         return test_score
 
 
-    for fold in [0,1,2,3]:
-        best_score = 1
-        curr_best_score = main_fold(fold, cfg.seed, best_score)
+    for target in cfg.target_columns:
+        print(f"Training for {target}")
+        for fold in [0,1,2,3]:
+            best_score = 1
+            curr_best_score = main_fold(fold, cfg.seed, best_score, target)
 
     cv = float(calc_oof()['mcrmse'])
 
     cfg.use_wandb = False
-    if cfg.train_whole_dataset:
-        train_whole_dataset()
-
     login(os.environ.get("HF_HUB_TOKEN"))
 
     api = HfApi()

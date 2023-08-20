@@ -24,10 +24,17 @@ def compute_mcrmse(preds, labels):
     """
 
     col_rmse = np.sqrt(np.mean((preds - labels) ** 2, axis=0))
-    mcrmse = np.mean(col_rmse)
+    if len(col_rmse) > 1:
+        mcrmse = np.mean(col_rmse)
 
-    return {
-        "content_rmse": col_rmse[0],
-        "wording_rmse": col_rmse[1],
-        "mcrmse": mcrmse,
-    }
+        return {
+            "content_rmse": col_rmse[0],
+            "wording_rmse": col_rmse[1],
+            "mcrmse": mcrmse,
+        }
+    else:
+        mcrmse = col_rmse[0]
+
+        return {
+            "mcrmse": mcrmse,
+        }
