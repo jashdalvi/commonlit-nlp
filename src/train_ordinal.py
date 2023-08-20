@@ -477,7 +477,7 @@ def main(cfg: DictConfig):
     login(os.environ.get("HF_HUB_TOKEN"))
 
     api = HfApi()
-    cfg.repo_id = f"jashdalvi/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}"
+    cfg.repo_id = f"jashdalvi/commonlit-kaggle-ordinal-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}"
     # Creating a model repository in baseplate
     create_repo(cfg.repo_id, private= True, exist_ok=True)
     # Pushing the model to the hub
@@ -491,8 +491,8 @@ def main(cfg: DictConfig):
     # Commenting out the kaggle api dataset upload code
     subprocess.run(["kaggle", "datasets", "init", "-p", cfg.output_dir], check=True)
     kaggle_dataset_metadata = {
-    "title": f"commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}",
-    "id": f"jashdalvi99/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", ""),
+    "title": f"commonlit-kaggle-ordinal-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}",
+    "id": f"jashdalvi99/commonlit-kaggle-ordinal-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", ""),
     "licenses": [
         {
         "name": "CC0-1.0"
