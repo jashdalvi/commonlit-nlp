@@ -429,6 +429,7 @@ def main(cfg: DictConfig):
                 optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
         else:
             if cfg.llrd < 1:
+                print("Applying LLRD")
                 optimizer, scheduler = get_grouped_parameters(model, num_train_steps)
             else:
                 optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
