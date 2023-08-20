@@ -206,6 +206,64 @@ def main(cfg: DictConfig):
                 last_epoch=-1,
         )
         return optimizer, scheduler
+    
+    def get_grouped_parameters(model, num_train_steps):
+        """get optimizer and scheduler"""
+        no_decay = ["bias", "LayerNorm.weight"]
+        print("parameter names of the model")
+        optimizer_params = [
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and "transformer" not in n],
+                "weight_decay": 0.001,
+                "lr" : cfg.lr
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay) and "transformer" not in n],
+                "weight_decay": 0.0,
+                "lr" : cfg.lr
+            }
+        ]
+        # There are three extra layers in the transformer model at the end
+        last_three_layer_names = ["transformer.encoder.rel_embeddings.weight", "transformer.encoder.LayerNorm.weight","transformer.encoder.LayerNorm.bias"]
+        optimizer_params += [
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
+                "weight_decay": 0.001,
+                "lr" : cfg.lr
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
+                "weight_decay": 0.0,
+                "lr" : cfg.lr
+            }
+        ]
+        lr = cfg.lr
+        layers = [model.transformer.embeddings] + list(model.transformer.encoder.layer)
+        layers.reverse()
+        for layer in layers:
+            optimizer_params += [
+                {
+                    "params": [p for n, p in layer.named_parameters() if not any(nd in n for nd in no_decay)],
+                    "weight_decay": 0.001,
+                    "lr" : lr
+                },
+                {
+                    "params": [p for n, p in layer.named_parameters() if any(nd in n for nd in no_decay)],
+                    "weight_decay": 0.0,
+                    "lr" : lr
+                }
+            ]
+            lr *= cfg.llrd
+        
+        optimizer = torch.optim.AdamW(optimizer_params)
+        scheduler = get_cosine_schedule_with_warmup(
+                optimizer,
+                num_warmup_steps=int(num_train_steps * cfg.warmup_ratio),
+                num_training_steps=num_train_steps,
+                last_epoch=-1,
+        )
+        return optimizer, scheduler
+    
 
     def train(epoch, model, train_loader, optimizer, scheduler, device, scaler):
         """training pass"""
@@ -354,7 +412,7 @@ def main(cfg: DictConfig):
         
         # Preparing the model
         model = Model(cfg.model_name)
-        model = model.to(cfg.device)
+        # model = model.to(cfg.device)
         if cfg.use_wandb:
             wandb.watch(model)
         
@@ -364,9 +422,15 @@ def main(cfg: DictConfig):
         num_train_steps = int(len(train_ds) / cfg.batch_size / cfg.gradient_accumulation_steps * cfg.epochs)
 
         if cfg.multi_gpu:
-            optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
+            if cfg.llrd < 1:
+                optimizer, scheduler = get_grouped_parameters(model.module, num_train_steps)
+            else:
+                optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
         else:
-            optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
+            if cfg.llrd < 1:
+                optimizer, scheduler = get_grouped_parameters(model, num_train_steps)
+            else:
+                optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
 
         scaler = GradScaler()
         global best_models_dict
@@ -437,9 +501,15 @@ def main(cfg: DictConfig):
         num_train_steps = int(len(train_ds) / cfg.batch_size / cfg.gradient_accumulation_steps * cfg.epochs)
 
         if cfg.multi_gpu:
-            optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
+            if cfg.llrd < 1:
+                optimizer, scheduler = get_grouped_parameters(model.module, num_train_steps)
+            else:
+                optimizer, scheduler = get_optimizer_scheduler(model.module, num_train_steps)
         else:
-            optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
+            if cfg.llrd < 1:
+                optimizer, scheduler = get_grouped_parameters(model, num_train_steps)
+            else:
+                optimizer, scheduler = get_optimizer_scheduler(model, num_train_steps)
 
         scaler = GradScaler()
         # Training loop
