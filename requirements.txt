@@ -9,3 +9,4 @@ hydra-core
 python-dotenv
 datasets
 sentencepiece
+scikit-learn
