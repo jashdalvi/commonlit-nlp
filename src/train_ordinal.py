@@ -225,7 +225,10 @@ def main(cfg: DictConfig):
             
             with autocast():
                 outputs = model(**batch)
-                loss = criterion_mcrmse(outputs, batch["targets"])
+                if cfg.criterion == "mcrmse":
+                    loss = criterion_mcrmse(outputs, batch["targets"])
+                else:
+                    loss = criterion(outputs, batch["targets"])
             
             if cfg.gradient_accumulation_steps > 1:
                 loss = loss / cfg.gradient_accumulation_steps
@@ -265,7 +268,10 @@ def main(cfg: DictConfig):
                 batch[k] = v.to(device)
             
             outputs = model(**batch)
-            loss = criterion_mcrmse(outputs, batch["targets"])
+            if cfg.criterion == "mcrmse":
+                loss = criterion_mcrmse(outputs, batch["targets"])
+            else:
+                loss = criterion(outputs, batch["targets"])
             losses.update(loss.item(), cfg.batch_size)
             all_targets.extend(batch["targets"].detach().cpu().numpy())
             all_outputs.extend(outputs.cpu().numpy())

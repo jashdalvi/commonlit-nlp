@@ -29,3 +29,4 @@ start_freeze_layer: 0
 end_freeze_layer: 12
 llrd: 1
 train_whole_dataset: False
+criterion: "mcrmse"
