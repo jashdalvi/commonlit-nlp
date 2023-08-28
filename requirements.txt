@@ -10,3 +10,5 @@ python-dotenv
 datasets
 sentencepiece
 scikit-learn
+pyspellchecker
+lightgbm

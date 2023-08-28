@@ -28,6 +28,7 @@ import subprocess
 from huggingface_hub import login, HfApi, hf_hub_download, snapshot_download, create_repo
 import shutil
 import json
+from train_lightgbm import train_lgb
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 load_dotenv()
@@ -588,6 +589,13 @@ def main(cfg: DictConfig):
         curr_best_score = main_fold(fold, cfg.seed, best_score)
 
     cv = float(calc_oof()['mcrmse'])
+
+    cv = float(train_lgb(
+        prompts_path = cfg.train_prompt_file,
+        summaries_path = cfg.train_summary_file,
+        model_name = cfg.model_name,
+        oof_file_path = os.path.join(cfg.output_dir, "oof.csv")
+    )["mcrmse"])
 
     cfg.use_wandb = False
     if cfg.train_whole_dataset:
