@@ -12,3 +12,5 @@ sentencepiece
 scikit-learn
 pyspellchecker
 lightgbm
+nltk
+spacy

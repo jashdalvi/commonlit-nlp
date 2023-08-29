@@ -597,6 +597,8 @@ def main(cfg: DictConfig):
         oof_file_path = os.path.join(cfg.output_dir, "oof.csv")
     )["mcrmse"])
 
+    print(f"CV after LGBM : {cv:.4f}")
+
     cfg.use_wandb = False
     if cfg.train_whole_dataset:
         train_whole_dataset()
