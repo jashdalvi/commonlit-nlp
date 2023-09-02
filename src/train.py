@@ -144,6 +144,7 @@ def main(cfg: DictConfig):
             if cfg.gradient_checkpointing_enable:
                 self.transformer.gradient_checkpointing_enable()
             
+            self.pool = LSTMPooling(config.hidden_size)
             self.output = nn.Linear(config.hidden_size, cfg.num_classes)
             self._init_weights(self.output)
             
@@ -170,7 +171,9 @@ def main(cfg: DictConfig):
         
         def forward(self, ids, mask, targets = None):
             transformer_out = self.transformer(input_ids = ids, attention_mask = mask)
-            logits = self.output(transformer_out.last_hidden_state[:,0,:])
+            pool_out = self.pool(transformer_out.last_hidden_state, mask)
+            # logits = self.output(transformer_out.last_hidden_state[:,0,:])
+            logits = self.output(pool_out)
             return logits
         
     class MCRMSELoss(nn.Module):
