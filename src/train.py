@@ -29,6 +29,7 @@ from huggingface_hub import login, HfApi, hf_hub_download, snapshot_download, cr
 import shutil
 import json
 from train_lightgbm import train_lgb
+from utils import MeanPooling, LSTMPooling
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 load_dotenv()
