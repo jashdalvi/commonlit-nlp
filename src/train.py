@@ -32,6 +32,7 @@ from train_lightgbm import train_lgb
 from utils import MeanPooling, LSTMPooling
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
+tqdm.pandas()
 load_dotenv()
 
 # declare the two GPUs
@@ -347,14 +348,12 @@ def main(cfg: DictConfig):
         return all_outputs
 
 
-    def get_full_text(row, sep_token, fix_spelling):
-        columns = ["prompt_title","prompt_question", "text"]
-        texts = []
-        for col in columns:
-            if col == "text" and cfg.correct_spelling:
-                texts.append(fix_spelling(row[col])[0]["generated_text"])
-            else:
-                texts.append(row[col])
+    def get_full_text(row, sep_token):
+        if cfg.correct_spelling:
+            columns = ["prompt_title","prompt_question", "corrected_text"]
+        else:
+            columns = ["prompt_title","prompt_question", "text"]
+        texts = [row[col] for col in columns]
         full_text = f" {sep_token} ".join(texts)
         row["full_text"] = full_text
         return row
@@ -377,8 +376,6 @@ def main(cfg: DictConfig):
         pdf = pd.read_csv(cfg.train_prompt_file)
         sdf = pd.read_csv(cfg.train_summary_file)
         df = pdf.merge(sdf, on="prompt_id")
-
-        fix_spelling = pipeline("text2text-generation",model="oliverguhr/spelling-correction-english-base")
         # 4 prompt ids, 4 folds
         id2fold = {
             "39c16e": 0,
@@ -397,8 +394,8 @@ def main(cfg: DictConfig):
         # Preparing the train texts and targets
     #     train_texts = train_df["text"].to_list()
     #     valid_texts = valid_df["text"].to_list()
-        train_texts = train_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
-        valid_texts = valid_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
+        train_texts = train_df.progress_apply(get_full_text, args = (sep_token, ), axis = 1)["full_text"].to_list()
+        valid_texts = valid_df.progress_apply(get_full_text, args = (sep_token, ), axis = 1)["full_text"].to_list()
         train_targets = train_df[list(cfg.target_columns)].values.tolist()
         valid_targets = valid_df[list(cfg.target_columns)].values.tolist()
 
@@ -553,13 +550,12 @@ def main(cfg: DictConfig):
         
         tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
         sep_token = tokenizer.sep_token
-        fix_spelling = pipeline("text2text-generation",model="oliverguhr/spelling-correction-english-base")
         
         for fold in [0,1,2,3]:
             index = df[df["fold"] == fold].index
             test_df = df[df["fold"] == fold].reset_index(drop=True)
     #         test_texts = test_df["text"].to_list()
-            test_texts = test_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
+            test_texts = test_df.progress_apply(get_full_text, args = (sep_token, ), axis = 1)["full_text"].to_list()
             test_targets = test_df[list(cfg.target_columns)].values.tolist()
             
             # Preparing the model

@@ -10,7 +10,7 @@ tqdm.pandas()
 # Target columns and columns to drop while training
 targets = ["content", "wording"]
 
-drop_columns = ["fold", "student_id", "prompt_id", "text", 
+drop_columns = ["fold", "student_id", "prompt_id", "text", "corrected_text",
                 "prompt_question", "prompt_title", 
                 "prompt_text"
                ] + targets
