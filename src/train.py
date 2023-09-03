@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 import os
 import transformers
-from transformers import AutoModel, AutoConfig, AutoTokenizer, get_cosine_schedule_with_warmup, get_polynomial_decay_schedule_with_warmup, get_linear_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup
+from transformers import AutoModel, AutoConfig, AutoTokenizer, get_cosine_schedule_with_warmup, get_polynomial_decay_schedule_with_warmup, get_linear_schedule_with_warmup, get_cosine_with_hard_restarts_schedule_with_warmup, pipeline
 import pandas as pd
 from torch.cuda.amp import autocast, GradScaler
 from sklearn.metrics import mean_squared_error
@@ -144,7 +144,6 @@ def main(cfg: DictConfig):
             if cfg.gradient_checkpointing_enable:
                 self.transformer.gradient_checkpointing_enable()
             
-            self.pool = LSTMPooling(config.hidden_size)
             self.output = nn.Linear(config.hidden_size, cfg.num_classes)
             self._init_weights(self.output)
             
@@ -171,9 +170,7 @@ def main(cfg: DictConfig):
         
         def forward(self, ids, mask, targets = None):
             transformer_out = self.transformer(input_ids = ids, attention_mask = mask)
-            pool_out = self.pool(transformer_out.last_hidden_state, mask)
-            # logits = self.output(transformer_out.last_hidden_state[:,0,:])
-            logits = self.output(pool_out)
+            logits = self.output(transformer_out.last_hidden_state[:,0,:])
             return logits
         
     class MCRMSELoss(nn.Module):
@@ -350,9 +347,14 @@ def main(cfg: DictConfig):
         return all_outputs
 
 
-    def get_full_text(row, sep_token):
+    def get_full_text(row, sep_token, fix_spelling):
         columns = ["prompt_title","prompt_question", "text"]
-        texts = [row[col] for col in columns]
+        texts = []
+        for col in columns:
+            if col == "text" and cfg.correct_spelling:
+                texts.append(fix_spelling(row[col])[0]["generated_text"])
+            else:
+                texts.append(row[col])
         full_text = f" {sep_token} ".join(texts)
         row["full_text"] = full_text
         return row
@@ -376,6 +378,7 @@ def main(cfg: DictConfig):
         sdf = pd.read_csv(cfg.train_summary_file)
         df = pdf.merge(sdf, on="prompt_id")
 
+        fix_spelling = pipeline("text2text-generation",model="oliverguhr/spelling-correction-english-base")
         # 4 prompt ids, 4 folds
         id2fold = {
             "39c16e": 0,
@@ -394,8 +397,8 @@ def main(cfg: DictConfig):
         # Preparing the train texts and targets
     #     train_texts = train_df["text"].to_list()
     #     valid_texts = valid_df["text"].to_list()
-        train_texts = train_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
-        valid_texts = valid_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
+        train_texts = train_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
+        valid_texts = valid_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
         train_targets = train_df[list(cfg.target_columns)].values.tolist()
         valid_targets = valid_df[list(cfg.target_columns)].values.tolist()
 
@@ -550,12 +553,13 @@ def main(cfg: DictConfig):
         
         tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
         sep_token = tokenizer.sep_token
+        fix_spelling = pipeline("text2text-generation",model="oliverguhr/spelling-correction-english-base")
         
         for fold in [0,1,2,3]:
             index = df[df["fold"] == fold].index
             test_df = df[df["fold"] == fold].reset_index(drop=True)
     #         test_texts = test_df["text"].to_list()
-            test_texts = test_df.apply(get_full_text, args = (sep_token,), axis = 1)["full_text"].to_list()
+            test_texts = test_df.apply(get_full_text, args = (sep_token, fix_spelling), axis = 1)["full_text"].to_list()
             test_targets = test_df[list(cfg.target_columns)].values.tolist()
             
             # Preparing the model
