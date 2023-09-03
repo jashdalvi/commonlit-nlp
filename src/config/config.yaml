@@ -7,7 +7,7 @@ train_prompt_file : "../data/prompts_train.csv"
 batch_size: 16
 epochs: 4
 lr: 2e-5
-max_len: 512
+max_len: 1024
 model_name: "microsoft/deberta-v3-large"
 hidden_dropout_prob: 0.1
 layer_norm_eps: 1e-7
@@ -29,5 +29,6 @@ start_freeze_layer: 0
 end_freeze_layer: 12
 llrd: 1
 train_whole_dataset: False
-correct_spelling: True
+correct_spelling: False
+use_prompt_text: True
 criterion: "mcrmse"

@@ -354,6 +354,8 @@ def main(cfg: DictConfig):
         else:
             columns = ["prompt_title","prompt_question", "text"]
         texts = [row[col] for col in columns]
+        if cfg.use_prompt_text:
+            texts.append(row["prompt_text"])
         full_text = f" {sep_token} ".join(texts)
         row["full_text"] = full_text
         return row
