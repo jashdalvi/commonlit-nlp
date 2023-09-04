@@ -356,6 +356,12 @@ def main(cfg: DictConfig):
         texts = [row[col] for col in columns]
         if cfg.use_prompt_text:
             texts.append(row["prompt_text"])
+        
+        # Use specified columns
+        if len(cfg.columns_to_use) > 0:
+            columns = cfg.columns_to_use
+            texts = [row[col] for col in columns]
+        
         full_text = f" {sep_token} ".join(texts)
         row["full_text"] = full_text
         return row
