@@ -91,7 +91,7 @@ def main(cfg : DictConfig):
         )
         api = HfApi()
         if cfg.push_to_hub:
-            # Creating a model repository in baseplate
+            # Creating a model repository
             create_repo(f"{cfg.repo_id}-fold-{fold}", private=True, exist_ok=True)
             # Pushing the model to the hub
             api.upload_folder(
