@@ -23,28 +23,7 @@ def main(cfg : DictConfig):
     data_dir = cfg.data_dir
 
     for fold in [0,1,2,3]:
-        df = pd.read_csv(cfg.train_summary_file)
-        id2fold = {
-            "39c16e": 0,
-            "814d6b": 1,
-            "3b9047": 2,
-            "ebad26": 3,
-        }
-        df["fold"] = df["prompt_id"].map(id2fold)
-
-        train_df = df[df["fold"] != fold]
-
-        id_count = 1
-        with open(os.path.join(cfg.save_dataset_path, "corpus.jsonl"), "w") as jsonl:
-            for i, row in train_df.iterrows():
-                line = {
-                    '_id': str(id_count),
-                    'title': "",
-                    'text': row["text"].replace('\n', ' '),
-                    'metadata': ""
-                }
-                id_count += 1
-                jsonl.write(json.dumps(line)+'\n')
+        
         ## Clearing the output path and creating a new one
         if os.path.exists(cfg.output_dir_path):
             shutil.rmtree(cfg.output_dir_path)
@@ -57,6 +36,29 @@ def main(cfg : DictConfig):
 
         if not os.path.exists(data_dir):
             os.makedirs(data_dir, exist_ok=True)
+
+        df = pd.read_csv(cfg.train_summary_file)
+        id2fold = {
+            "39c16e": 0,
+            "814d6b": 1,
+            "3b9047": 2,
+            "ebad26": 3,
+        }
+        df["fold"] = df["prompt_id"].map(id2fold)
+
+        train_df = df[df["fold"] != fold]
+
+        id_count = 1
+        with open(os.path.join(cfg.data_dir, "corpus.jsonl"), "w") as jsonl:
+            for i, row in train_df.iterrows():
+                line = {
+                    '_id': str(id_count),
+                    'title': "",
+                    'text': row["text"].replace('\n', ' '),
+                    'metadata': ""
+                }
+                id_count += 1
+                jsonl.write(json.dumps(line)+'\n')
 
         # training the model with GPL
         gpl.train(
