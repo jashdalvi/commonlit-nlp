@@ -14,3 +14,4 @@ pyspellchecker
 lightgbm
 nltk
 spacy
+gpl

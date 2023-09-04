@@ -4,3 +4,4 @@ outputs/
 wandb/
 .env
 __pycache__/
+gpl_data/

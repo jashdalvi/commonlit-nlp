@@ -1,0 +1,18 @@
+hydra:
+  job:
+    chdir: False
+
+train_summary_file: "../data/summaries_train.csv"
+train_prompt_file : "../data/prompts_train.csv"
+base_ckpt: 'microsoft/deberta-v3-large'
+data_dir: "../gpl_data"
+output_dir_path: "../output"
+score_function: "dot" # Need to change to cos_sim for bge models
+batch_size: 8
+train_steps: 10000 # Number of training steps to use
+new_size: null #null or None means use the original size of the dataset
+queries_per_passage: 3 # Number of queries per passage
+repo_id: "jashdalvi/commonlit-kaggle-gpl-deberta-v3-large"
+push_to_hub: True
+rescale_range: null # Need to change to [-1.0,1.0] for bge models
+max_seq_length: 512 # Change to 512 for bge models
