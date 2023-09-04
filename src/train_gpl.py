@@ -99,7 +99,7 @@ def main(cfg : DictConfig):
                     cfg.output_dir_path, str(cfg.train_steps)
                 ),
                 path_in_repo="/",
-                repo_id=cfg.repo_id,
+                repo_id=f"{cfg.repo_id}-fold-{fold}",
                 repo_type="model",
             )
 
