@@ -33,3 +33,5 @@ correct_spelling: False
 use_prompt_text: True
 columns_to_use: ["text", "prompt_text"]
 criterion: "mcrmse"
+use_gpl_checkpoint: True 
+gpl_repo_id: "jashdalvi/commonlit-kaggle-gpl-deberta-v3-large"

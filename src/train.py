@@ -122,7 +122,7 @@ def main(cfg: DictConfig):
         
     class Model(nn.Module):
         """Model class"""
-        def __init__(self, model_name):
+        def __init__(self, model_name, fold):
             super().__init__()
 
             self.model_name = model_name
@@ -141,7 +141,12 @@ def main(cfg: DictConfig):
             
             self.config = config
             
-            self.transformer = AutoModel.from_pretrained(model_name, config=config)
+            if cfg.use_gpl_checkpoint:
+                print("Using GPL checkpoint")
+                self.transformer = AutoModel.from_pretrained(f"{cfg.gpl_repo_id}-fold-{fold}", config=config)
+            else:
+                self.transformer = AutoModel.from_pretrained(model_name, config=config)
+            
             if cfg.gradient_checkpointing_enable:
                 self.transformer.gradient_checkpointing_enable()
             
@@ -425,7 +430,7 @@ def main(cfg: DictConfig):
             collate_fn = collate_fn)
         
         # Preparing the model
-        model = Model(cfg.model_name)
+        model = Model(cfg.model_name, fold)
         model = model.to(cfg.device)
         if cfg.use_wandb:
             wandb.watch(model)
