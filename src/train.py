@@ -30,6 +30,7 @@ import shutil
 import json
 from train_lightgbm import train_lgb
 from utils import MeanPooling, LSTMPooling
+from huggingface_hub import login
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 tqdm.pandas()
@@ -657,6 +658,7 @@ def main(cfg: DictConfig):
     shutil.rmtree("wandb")
 
 if __name__ == "__main__":
+    login(os.environ.get("HF_HUB_TOKEN"))
     main()
 
 
