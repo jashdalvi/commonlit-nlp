@@ -43,10 +43,11 @@ def compute_mcrmse(preds, labels):
     
 class MeanPooling(nn.Module):
     """Mean pooling representation"""
-    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True):
+    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True, config = None):
         super(MeanPooling, self).__init__()
         self.calc_output = calc_output
-        if self.cacl_output:
+        self.config = config
+        if self.calc_output:
             self.output = nn.Linear(hidden_size, num_classes)
             self._init_weights(self.output)
 
@@ -76,11 +77,12 @@ class MeanPooling(nn.Module):
 
 class LSTMPooling(nn.Module):
     """LSTM Pooling representation"""
-    def __init__(self, hidden_size = 768, num_classes = 2):
+    def __init__(self, hidden_size = 768, num_classes = 2, config = None):
         super(LSTMPooling, self).__init__()
         self.hidden_size = hidden_size
+        self.config = config
         self.lstm = nn.LSTM(self.hidden_size, self.hidden_size//2, batch_first=True, bidirectional=True)
-        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes)
+        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes, config = self.config)
 
     def forward(self, last_hidden_state, attention_mask, all_hidden_states):
         last_hidden_state, (_, _) = self.lstm(last_hidden_state)
@@ -89,9 +91,10 @@ class LSTMPooling(nn.Module):
 
 class MaxPooling(nn.Module):
     """Max pooling representation"""
-    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True):
+    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True, config = None):
         super(MaxPooling, self).__init__()
         self.calc_output = calc_output
+        self.config = config
         if self.calc_output:
             self.output = nn.Linear(hidden_size, num_classes)
             self._init_weights(self.output)
@@ -119,11 +122,12 @@ class MaxPooling(nn.Module):
     
 class MeanMaxPooling(nn.Module):
     """Mean Max pooling representation"""
-    def __init__(self, hidden_size = 768, num_classes = 2):
+    def __init__(self, hidden_size = 768, num_classes = 2, config = None):
         super(MeanMaxPooling, self).__init__()
-        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False)
-        self.max_pooling = MaxPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False)
+        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False, config = config)
+        self.max_pooling = MaxPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False, config = config)
         self.output = nn.Linear(hidden_size*2, num_classes)
+        self.config = config
         self._init_weights(self.output)
 
     def _init_weights(self, module):
@@ -147,9 +151,10 @@ class MeanMaxPooling(nn.Module):
         return mean_max_embeddings
     
 class CLSPooling(nn.Module):
-    def __init__(self, hidden_size = 768, num_classes = 2):
+    def __init__(self, hidden_size = 768, num_classes = 2, config = None):
         super(CLSPooling, self).__init__()
         self.output = nn.Linear(hidden_size, num_classes)
+        self.config = config
         self._init_weights(self.output)
 
     def _init_weights(self, module):
@@ -172,21 +177,22 @@ class CLSPooling(nn.Module):
 
 
 class ConcatPooling(nn.Module):
-    def __init__(self, hidden_size = 768, num_classes = 2, num_layers = 4, pooling = "cls"):
+    def __init__(self, hidden_size = 768, num_classes = 2, num_layers = 4, pooling = "cls", config = None):
         super(ConcatPooling, self).__init__()
         self.num_layers = num_layers
+        self.config = config
         if pooling == "cls":
-            self.pooling = CLSPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+            self.pooling = CLSPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes, config = self.config)
         elif pooling == "mean":
-            self.pooling = MeanPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+            self.pooling = MeanPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes, config = self.config)
         elif pooling == "max":
-            self.pooling = MaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+            self.pooling = MaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes, config = self.config)
         elif pooling == "mean_max":
-            self.pooling = MeanMaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+            self.pooling = MeanMaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes, config = self.config)
 
     def forward(self, last_hidden_state, attention_mask, all_hidden_states):
         concat_embeddings = torch.cat([all_hidden_states[-i] for i in range(1, self.num_layers+1)], -1)
-        concat_embeddings = self.pooling(concat_embeddings, attention_mask)
+        concat_embeddings = self.pooling(concat_embeddings, attention_mask, all_hidden_states)
         return concat_embeddings
     
 #Getting the prompt tuning soft embeddings

@@ -153,17 +153,17 @@ def main(cfg: DictConfig):
             
 
             if cfg.pooling == "cls":
-                self.pool = CLSPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+                self.pool = CLSPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, config = self.config)
             elif cfg.pooling == "mean":
-                self.pool = MeanPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+                self.pool = MeanPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, config = self.config)
             elif cfg.pooling == "max":
-                self.pool = MaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+                self.pool = MaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, config = self.config)
             elif cfg.pooling == "mean_max":
-                self.pool = MeanMaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+                self.pool = MeanMaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, config = self.config)
             elif cfg.pooling == "concat":
-                self.pool = ConcatPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, pooling = cfg.concat_pooling)
+                self.pool = ConcatPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, pooling = cfg.concat_pooling, config = self.config)
             elif cfg.pooling == "lstm":
-                self.pool = LSTMPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+                self.pool = LSTMPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, config = self.config)
             
             if cfg.freeze:
                 self.freeze(cfg.start_freeze_layer, cfg.end_freeze_layer)
