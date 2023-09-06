@@ -43,32 +43,152 @@ def compute_mcrmse(preds, labels):
     
 class MeanPooling(nn.Module):
     """Mean pooling representation"""
-    def __init__(self):
+    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True):
         super(MeanPooling, self).__init__()
+        self.calc_output = calc_output
+        if self.cacl_output:
+            self.output = nn.Linear(hidden_size, num_classes)
+            self._init_weights(self.output)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
         
-    def forward(self, last_hidden_state, attention_mask):
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
         sum_mask = input_mask_expanded.sum(1)
         sum_mask = torch.clamp(sum_mask, min=1e-9)
         mean_embeddings = sum_embeddings / sum_mask
+        if self.calc_output:
+            mean_embeddings = self.output(mean_embeddings)
         return mean_embeddings
     
 
 class LSTMPooling(nn.Module):
     """LSTM Pooling representation"""
-    def __init__(self, hidden_size = 768):
+    def __init__(self, hidden_size = 768, num_classes = 2):
         super(LSTMPooling, self).__init__()
         self.hidden_size = hidden_size
         self.lstm = nn.LSTM(self.hidden_size, self.hidden_size//2, batch_first=True, bidirectional=True)
-        self.mean_pooling = MeanPooling()
+        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes)
 
-    def forward(self, last_hidden_state, attention_mask):
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
         last_hidden_state, (_, _) = self.lstm(last_hidden_state)
-        mean_embeddings = self.mean_pooling(last_hidden_state, attention_mask)
+        mean_embeddings = self.mean_pooling(last_hidden_state, attention_mask, all_hidden_states)
         return mean_embeddings
-    
 
+class MaxPooling(nn.Module):
+    """Max pooling representation"""
+    def __init__(self, hidden_size = 768, num_classes = 2, calc_output = True):
+        super(MaxPooling, self).__init__()
+        self.calc_output = calc_output
+        if self.calc_output:
+            self.output = nn.Linear(hidden_size, num_classes)
+            self._init_weights(self.output)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+        
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
+        last_hidden_state[input_mask_expanded == 0] = -1e9  # Set padding tokens to large negative value
+        max_embeddings, _ = torch.max(last_hidden_state, 1)
+        if self.calc_output:
+            max_embeddings = self.output(max_embeddings)
+        return max_embeddings
+    
+class MeanMaxPooling(nn.Module):
+    """Mean Max pooling representation"""
+    def __init__(self, hidden_size = 768, num_classes = 2):
+        super(MeanMaxPooling, self).__init__()
+        self.mean_pooling = MeanPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False)
+        self.max_pooling = MaxPooling(hidden_size=hidden_size, num_classes=num_classes, calc_output=False)
+        self.output = nn.Linear(hidden_size*2, num_classes)
+        self._init_weights(self.output)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+    
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
+        mean_embeddings = self.mean_pooling(last_hidden_state, attention_mask, all_hidden_states)
+        max_embeddings = self.max_pooling(last_hidden_state, attention_mask, all_hidden_states)
+        mean_max_embeddings = torch.cat((mean_embeddings, max_embeddings), 1)
+        mean_max_embeddings = self.output(mean_max_embeddings)
+        return mean_max_embeddings
+    
+class CLSPooling(nn.Module):
+    def __init__(self, hidden_size = 768, num_classes = 2):
+        super(CLSPooling, self).__init__()
+        self.output = nn.Linear(hidden_size, num_classes)
+        self._init_weights(self.output)
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.bias is not None:
+                module.bias.data.zero_()
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+            if module.padding_idx is not None:
+                module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.LayerNorm):
+            module.bias.data.zero_()
+            module.weight.data.fill_(1.0)
+
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
+        cls_embeddings = last_hidden_state[:, 0, :]
+        cls_embeddings = self.output(cls_embeddings)
+        return cls_embeddings
+
+
+class ConcatPooling(nn.Module):
+    def __init__(self, hidden_size = 768, num_classes = 2, num_layers = 4, pooling = "cls"):
+        super(ConcatPooling, self).__init__()
+        self.num_layers = num_layers
+        if pooling == "cls":
+            self.pooling = CLSPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+        elif pooling == "mean":
+            self.pooling = MeanPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+        elif pooling == "max":
+            self.pooling = MaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+        elif pooling == "mean_max":
+            self.pooling = MeanMaxPooling(hidden_size=hidden_size * num_layers, num_classes=num_classes)
+
+    def forward(self, last_hidden_state, attention_mask, all_hidden_states):
+        concat_embeddings = torch.cat([all_hidden_states[-i] for i in range(1, self.num_layers+1)], -1)
+        concat_embeddings = self.pooling(concat_embeddings, attention_mask)
+        return concat_embeddings
+    
 #Getting the prompt tuning soft embeddings
 class SoftEmbedding(nn.Module):
     def __init__(self, 

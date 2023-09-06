@@ -20,7 +20,7 @@ from dataclasses import dataclass, field, asdict
 import wandb
 from tqdm import tqdm
 from dotenv import load_dotenv
-from utils import AverageMeter, compute_mcrmse
+from utils import AverageMeter, compute_mcrmse, MeanPooling, LSTMPooling, CLSPooling, MaxPooling, MeanMaxPooling, ConcatPooling
 import hydra
 from hydra import compose, initialize
 from omegaconf import OmegaConf, DictConfig
@@ -151,8 +151,19 @@ def main(cfg: DictConfig):
             if cfg.gradient_checkpointing_enable:
                 self.transformer.gradient_checkpointing_enable()
             
-            self.output = nn.Linear(config.hidden_size, cfg.num_classes)
-            self._init_weights(self.output)
+
+            if cfg.pooling == "cls":
+                self.pool = CLSPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+            elif cfg.pooling == "mean":
+                self.pool = MeanPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+            elif cfg.pooling == "max":
+                self.pool = MaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+            elif cfg.pooling == "mean_max":
+                self.pool = MeanMaxPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
+            elif cfg.pooling == "concat":
+                self.pool = ConcatPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes, pooling = cfg.concat_pooling)
+            elif cfg.pooling == "lstm":
+                self.pool = LSTMPooling(hidden_size = config.hidden_size, num_classes = cfg.num_classes)
             
             if cfg.freeze:
                 self.freeze(cfg.start_freeze_layer, cfg.end_freeze_layer)
@@ -177,7 +188,7 @@ def main(cfg: DictConfig):
         
         def forward(self, ids, mask, targets = None):
             transformer_out = self.transformer(input_ids = ids, attention_mask = mask)
-            logits = self.output(transformer_out.last_hidden_state[:,0,:])
+            logits = self.pool(transformer_out.last_hidden_state, mask, transformer_out.hidden_states)
             return logits
         
     class MCRMSELoss(nn.Module):
