@@ -123,7 +123,7 @@ def main(cfg: DictConfig):
         
     class Model(nn.Module):
         """Model class"""
-        def __init__(self, model_name, fold):
+        def __init__(self, model_name, fold = None):
             super().__init__()
 
             self.model_name = model_name

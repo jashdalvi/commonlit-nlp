@@ -26,7 +26,7 @@ output_dir: "../output/"
 repo_id: ""
 freeze: True 
 start_freeze_layer: 0
-end_freeze_layer: 12
+end_freeze_layer: 6
 llrd: 1
 train_whole_dataset: False
 correct_spelling: False
