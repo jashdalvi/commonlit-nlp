@@ -613,7 +613,7 @@ def main(cfg: DictConfig):
         return test_score
 
 
-    for fold in [0,1,2,3]:
+    for fold in range(4):
         best_score = 1
         curr_best_score = main_fold(fold, cfg.seed, best_score)
 
