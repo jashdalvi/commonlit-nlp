@@ -46,7 +46,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
 # Dict for best models
-best_models_dict = dict()
+best_models_dict = {
+    3: "../output/deberta-v3-large_fold3_seed42.bin"
+}
 
 @hydra.main(config_path="config", config_name="config")
 def main(cfg: DictConfig):
@@ -298,7 +300,10 @@ def main(cfg: DictConfig):
             
             with autocast():
                 outputs = model(**batch)
-                loss = criterion_mcrmse(outputs, batch["targets"])
+                if cfg.criterion == "rmse":
+                    loss = criterion(outputs, batch["targets"])
+                else:
+                    loss = criterion_mcrmse(outputs, batch["targets"])
             
             if cfg.gradient_accumulation_steps > 1:
                 loss = loss / cfg.gradient_accumulation_steps
@@ -338,7 +343,10 @@ def main(cfg: DictConfig):
                 batch[k] = v.to(device)
             
             outputs = model(**batch)
-            loss = criterion_mcrmse(outputs, batch["targets"])
+            if cfg.criterion == "rmse":
+                loss = criterion(outputs, batch["targets"])
+            else:
+                loss = criterion_mcrmse(outputs, batch["targets"])
             losses.update(loss.item(), cfg.batch_size)
             all_targets.extend(batch["targets"].detach().cpu().numpy())
             all_outputs.extend(outputs.cpu().numpy())
@@ -613,7 +621,7 @@ def main(cfg: DictConfig):
         return test_score
 
 
-    for fold in range(4):
+    for fold in range(3):
         best_score = 1
         curr_best_score = main_fold(fold, cfg.seed, best_score)
 
