@@ -131,11 +131,12 @@ def objective(trial, df):
         'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-3, 10.0),
         'colsample_bytree': trial.suggest_categorical('colsample_bytree', [0.3,0.4,0.5,0.6,0.7,0.8,0.9, 1.0]),
         'subsample': trial.suggest_categorical('subsample', [0.4,0.5,0.6,0.7,0.8,1.0]),
-        'learning_rate': trial.suggest_categorical('learning_rate', [0.006,0.008,0.01,0.014,0.017,0.02]),
+        'learning_rate': trial.suggest_categorical('learning_rate', [0.006,0.008,0.01,0.014,0.017,0.02, 0.05]),
         'max_depth': trial.suggest_categorical('max_depth', [10,20,100]),
         'num_leaves' : trial.suggest_int('num_leaves', 1, 1000),
         'min_child_samples': trial.suggest_int('min_child_samples', 1, 300),
         'cat_smooth' : trial.suggest_int('min_data_per_groups', 1, 100),
+        'boosting_type': 'gbdt',
         'verbose': -1,
     } 
     score = train_lgb_hparam(params, df)
@@ -160,7 +161,7 @@ if __name__ == "__main__":
     oof_score_deberta = compute_mcrmse(df[["pred_content", "pred_wording"]].values, df[["content", "wording"]].values)["mcrmse"]
     study = optuna.create_study(direction='minimize')
     objective = partial(objective, df = df)
-    study.optimize(objective, n_trials=50)
+    study.optimize(objective, n_trials=100)
     print('Number of finished trials:', len(study.trials))
     print('Best trial:', study.best_trial.params)
     print("OOF score model deberta: ", oof_score_deberta)
