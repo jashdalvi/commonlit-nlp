@@ -16,3 +16,5 @@ nltk
 spacy
 gpl
 optuna
+textdistance
+textstat

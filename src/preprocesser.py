@@ -6,6 +6,10 @@ import spacy
 import re
 from spellchecker import SpellChecker
 import pandas as pd
+import numpy as np
+from nltk.tokenize import word_tokenize
+import textdistance
+import textstat
 
 class Preprocessor:
     def __init__(self, 
@@ -103,6 +107,50 @@ class Preprocessor:
         amount_miss = len(list(self.speller.unknown(wordlist)))
 
         return amount_miss
+
+    def get_stopwords_rel(self,  text):
+        text_words = word_tokenize(text)
+        num_stopwords = sum([word in self.STOP_WORDS for word in text_words])
+        
+        return num_stopwords/len(text_words)
+
+    def get_stat_features(self, df, text_col="text"):
+        df["num_unique_words"] = df[text_col].apply(lambda x: len(set(x.split())))
+        df["num_words"] = df[text_col].apply(lambda x: len(x.split()))
+        df["num_sentences"] = df[text_col].apply(lambda x: len(x.split('.')))
+        df["isupper"] = df[text_col].apply(lambda x: x[0].isupper())
+        df["mean_num_words"] = df[text_col].apply(lambda x: np.mean([len(e.split()) for e in x.split('.')]))
+        df["mean_num_unique_words"] = df[text_col].apply(lambda x: np.mean([len(set(e.split())) for e in x.split('.')]))
+        df["num_slash"] = df[text_col].apply(lambda x: x.count("\n"))
+        df["paragraph_count"] = df[text_col].apply(lambda x: x.count("\n\n"))
+        df["upper_count"] = df[text_col].apply(lambda x: np.sum([w.isupper() for w in x.split()])/len(x.split()))
+        df["syntax_count"] = df[text_col].apply(lambda x: x.count(",") + x.count("-") + x.count(";") + x.count(":"))
+        df["is_end_with_dot"] = df[text_col].apply(lambda x: int(x[-1] == "."))
+        
+    #     df["num_unique_words_prompt_text"] = df["prompt_text"].apply(lambda x: len(set(x.split()))) - df["num_unique_words"]
+    #     df["num_words_prompt_text"] = df["prompt_text"].apply(lambda x: len(x.split())) - df["num_words"]
+    #     df["num_sentences_prompt_text"] = df["prompt_text"].apply(lambda x: len(x.split('.'))) - df["num_sentences"]
+
+        # df["lcsstr"] = df.progress_apply(lambda row: textdistance.lcsstr(row.text, row.prompt_text).split().__len__(), axis=1)
+        
+        df["stopwords_rel"] = df[text_col].progress_apply(lambda x: self.get_stopwords_rel(x))
+    #     df['diff_emb_sb'] = df.progress_apply(lambda x: np.sum(get_emb_sb(x["text"])*get_emb_sb(x["prompt_text"])), axis=1)
+    #     df['diff_emb_qa'] = df.progress_apply(lambda x: np.sum(get_emb_qa(x["text"])*get_emb_qa(x["prompt_question"])), axis=1)
+    #     df['ch'] = df.progress_apply(lambda x: get_ch_label(x["text"]), axis=1)
+    #     df['rw'] = df.progress_apply(lambda x: get_rw(x["prompt_question"], x["text"]), axis=1)
+
+        df['automated_readability_index'] = df[text_col].progress_apply(lambda x: textstat.automated_readability_index(x))
+        df['coleman_liau_index'] = df[text_col].progress_apply(lambda x: textstat.coleman_liau_index(x))
+        df['smog_index'] = df[text_col].progress_apply(lambda x: textstat.smog_index(x))
+        df['dale_chall_readability_score'] = df[text_col].progress_apply(lambda x: textstat.dale_chall_readability_score(x))
+        df['linsear_write_formula'] = df[text_col].progress_apply(lambda x: textstat.linsear_write_formula(x))
+        df['gunning_fog'] = df[text_col].progress_apply(lambda x: textstat.gunning_fog(x))
+        df['text_standard_float'] = df[text_col].progress_apply(lambda x: textstat.text_standard(x, float_output=True))
+        df['spache_readability'] = df[text_col].progress_apply(lambda x: textstat.spache_readability(x))
+        df['rix'] = df[text_col].progress_apply(lambda x: textstat.rix(x))
+        df['lix'] = df[text_col].progress_apply(lambda x: textstat.lix(x))
+
+        return df
     
     def run(self, 
             prompts: pd.DataFrame,
@@ -159,5 +207,6 @@ class Preprocessor:
 #         input_df = pd.concat([input_df, ners_count_df], axis=1)
         
         input_df['quotes_count'] = input_df.progress_apply(self.quotes_count, axis=1)
+        input_df = self.get_stat_features(input_df)
         
         return input_df.drop(columns=["summary_tokens", "prompt_tokens"])
