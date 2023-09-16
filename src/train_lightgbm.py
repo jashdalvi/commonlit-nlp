@@ -47,7 +47,7 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
                     'objective': 'regression',
                     'metric': 'rmse',
                     'learning_rate': 0.05,
-                    }
+                }
             evaluation_results = {}
             model = lgb.train(params,
                             num_boost_round=10000,
@@ -154,14 +154,22 @@ def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path)
     
 
 if __name__ == "__main__":
-    df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
-                            summaries_path = "../data/summaries_train.csv",
-                            model_name = "microsoft/deberta-v3-large", 
-                            oof_file_path= "../output/oof.csv")
-    oof_score_deberta = compute_mcrmse(df[["pred_content", "pred_wording"]].values, df[["content", "wording"]].values)["mcrmse"]
-    study = optuna.create_study(direction='minimize')
-    objective = partial(objective, df = df)
-    study.optimize(objective, n_trials=100)
-    print('Number of finished trials:', len(study.trials))
-    print('Best trial:', study.best_trial.params)
-    print("OOF score model deberta: ", oof_score_deberta)
+    # df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
+    #                         summaries_path = "../data/summaries_train.csv",
+    #                         model_name = "microsoft/deberta-v3-large", 
+    #                         oof_file_path= "../output/oof.csv")
+    # oof_score_deberta = compute_mcrmse(df[["pred_content", "pred_wording"]].values, df[["content", "wording"]].values)["mcrmse"]
+    # study = optuna.create_study(direction='minimize')
+    # objective = partial(objective, df = df)
+    # study.optimize(objective, n_trials=100)
+    # print('Number of finished trials:', len(study.trials))
+    # print('Best trial:', study.best_trial.params)
+    # print("OOF score model deberta: ", oof_score_deberta)
+    score = train_lgb(
+        prompts_path = "../data/prompts_train.csv", 
+        summaries_path = "../data/summaries_train.csv",
+        model_name = "microsoft/deberta-v3-large", 
+        oof_file_path= "../output/oof.csv"
+    )["mcrmse"]
+
+    print("The CV score is: ", score)
