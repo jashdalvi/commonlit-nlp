@@ -46,9 +46,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "true"
 hydra.core.global_hydra.GlobalHydra.instance().clear()
 
 # Dict for best models
-best_models_dict = {
-    3: "../output/deberta-v3-large_fold3_seed42.bin"
-}
+best_models_dict = dict()
 
 @hydra.main(config_path="config", config_name="config")
 def main(cfg: DictConfig):
@@ -621,7 +619,7 @@ def main(cfg: DictConfig):
         return test_score
 
 
-    for fold in range(3):
+    for fold in range(4):
         best_score = 1
         curr_best_score = main_fold(fold, cfg.seed, best_score)
 
