@@ -26,12 +26,12 @@ output_dir: "../output/"
 repo_id: ""
 freeze: True
 start_freeze_layer: 0
-end_freeze_layer: 6
+end_freeze_layer: 12
 llrd: 1
 train_whole_dataset: False
 correct_spelling: False
 use_prompt_text: False
-columns_to_use: ["text", "prompt_title","prompt_question", "prompt_text"]
+columns_to_use: ["text", "prompt_question", "prompt_title", "prompt_text"]
 criterion: "mcrmse"
 pooling: "cls"
 concat_pooling: "cls"
