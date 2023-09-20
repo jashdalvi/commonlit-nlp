@@ -125,7 +125,7 @@ def train_lgb_hparam(params, df):
 def objective(trial, df):
     params = {
         'metric': 'rmse', 
-        'random_state': 48,
+        'random_state': 42,
         'n_estimators': 20000,
         'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-3, 10.0),
         'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-3, 10.0),
