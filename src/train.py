@@ -450,6 +450,9 @@ def main(cfg: DictConfig):
         # Preparing the model
         model = Model(cfg.model_name, fold)
         model = model.to(cfg.device)
+        if cfg.compile:
+            model = torch.compile(model)
+        
         if cfg.use_wandb:
             wandb.watch(model)
         
