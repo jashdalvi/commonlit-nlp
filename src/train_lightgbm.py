@@ -53,11 +53,11 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
             #         'learning_rate': 0.05,
             # }
             params = {
-                'metric': 'rmse', 
-                'random_state': 41,
-                'n_estimators': 20000,
-                'reg_alpha': 0.04792199364668011, 'reg_lambda': 3.1208575739026476, 'colsample_bytree': 0.8, 'subsample': 0.6, 'learning_rate': 0.02, 'max_depth': 10, 'num_leaves': 788, 'min_child_samples': 161, 'min_data_per_groups': 45,
                 'boosting_type': 'gbdt',
+                'random_state': 42,
+                'objective': 'regression',
+                'metric': 'rmse',
+                'max_depth': 5, 'learning_rate': 0.08185194910306416, 'lambda_l1': 7.249736223975043e-08, 'lambda_l2': 2.5435724074500937e-07, 'num_leaves': 20,
                 'verbose': -1,
             }
             
@@ -136,22 +136,36 @@ def train_lgb_hparam(params, df):
     return score
 
 def objective(trial, df):
+    # params = {
+    #     'metric': 'rmse', 
+    #     'random_state': 41,
+    #     'n_estimators': 20000,
+    #     'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-3, 10.0),
+    #     'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-3, 10.0),
+    #     'colsample_bytree': trial.suggest_categorical('colsample_bytree', [0.3,0.4,0.5,0.6,0.7,0.8,0.9, 1.0]),
+    #     'subsample': trial.suggest_categorical('subsample', [0.4,0.5,0.6,0.7,0.8,1.0]),
+    #     'learning_rate': trial.suggest_categorical('learning_rate', [0.006,0.008,0.01,0.014,0.017,0.02, 0.05]),
+    #     'max_depth': trial.suggest_categorical('max_depth', [10,20,100]),
+    #     'num_leaves' : trial.suggest_int('num_leaves', 2, 1000),
+    #     'min_child_samples': trial.suggest_int('min_child_samples', 1, 300),
+    #     'cat_smooth' : trial.suggest_int('min_data_per_groups', 1, 100),
+    #     'boosting_type': 'gbdt',
+    #     'verbose': -1,
+    # } 
+    max_depth = trial.suggest_int('max_depth', 2, 10)
     params = {
-        'metric': 'rmse', 
-        'random_state': 41,
-        'n_estimators': 20000,
-        'reg_alpha': trial.suggest_loguniform('reg_alpha', 1e-3, 10.0),
-        'reg_lambda': trial.suggest_loguniform('reg_lambda', 1e-3, 10.0),
-        'colsample_bytree': trial.suggest_categorical('colsample_bytree', [0.3,0.4,0.5,0.6,0.7,0.8,0.9, 1.0]),
-        'subsample': trial.suggest_categorical('subsample', [0.4,0.5,0.6,0.7,0.8,1.0]),
-        'learning_rate': trial.suggest_categorical('learning_rate', [0.006,0.008,0.01,0.014,0.017,0.02, 0.05]),
-        'max_depth': trial.suggest_categorical('max_depth', [10,20,100]),
-        'num_leaves' : trial.suggest_int('num_leaves', 2, 1000),
-        'min_child_samples': trial.suggest_int('min_child_samples', 1, 300),
-        'cat_smooth' : trial.suggest_int('min_data_per_groups', 1, 100),
         'boosting_type': 'gbdt',
-        'verbose': -1,
-    } 
+        'random_state': 42,
+        'objective': 'regression',
+        'metric': 'rmse',
+        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1),
+        'max_depth': max_depth,
+        'lambda_l1': trial.suggest_loguniform('lambda_l1', 1e-8, 10.0),
+        'lambda_l2': trial.suggest_loguniform('lambda_l2', 1e-8, 10.0),
+        'num_leaves': trial.suggest_int('num_leaves', 2, 2**max_depth - 1),
+        'verbosity': -1  # Add this line to suppress warnings and info messages
+
+    }
     score = train_lgb_hparam(params, df)
     mcrmse = score["mcrmse"]
     return mcrmse
@@ -188,23 +202,23 @@ if __name__ == "__main__":
         "../output/oof_v7.csv"
     ]
     # oof_file_path = "../output/oof.csv"
-    df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
-                            summaries_path = "../data/summaries_train.csv",
-                            model_name = "microsoft/deberta-v3-large", 
-                            oof_file_path= oof_file_path)
-    oof_score_deberta = compute_mcrmse(df[["pred_content_6", "pred_wording_6"]].values, df[["content", "wording"]].values)["mcrmse"]
-    print("OOF score model deberta: ", oof_score_deberta)
-    study = optuna.create_study(direction='minimize')
-    objective = partial(objective, df = df)
-    study.optimize(objective, n_trials=200)
-    print('Number of finished trials:', len(study.trials))
-    print('Best trial:', study.best_trial.params)
+    # df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
+    #                         summaries_path = "../data/summaries_train.csv",
+    #                         model_name = "microsoft/deberta-v3-large", 
+    #                         oof_file_path= oof_file_path)
+    # oof_score_deberta = compute_mcrmse(df[["pred_content_6", "pred_wording_6"]].values, df[["content", "wording"]].values)["mcrmse"]
+    # print("OOF score model deberta: ", oof_score_deberta)
+    # study = optuna.create_study(direction='minimize')
+    # objective = partial(objective, df = df)
+    # study.optimize(objective, n_trials=200)
+    # print('Number of finished trials:', len(study.trials))
+    # print('Best trial:', study.best_trial.params)
     
-    # score = train_lgb(
-    #     prompts_path = "../data/prompts_train.csv", 
-    #     summaries_path = "../data/summaries_train.csv",
-    #     model_name = "microsoft/deberta-v3-large", 
-    #     oof_file_path= oof_file_path
-    # )["mcrmse"]
+    score = train_lgb(
+        prompts_path = "../data/prompts_train.csv", 
+        summaries_path = "../data/summaries_train.csv",
+        model_name = "microsoft/deberta-v3-large", 
+        oof_file_path= oof_file_path
+    )["mcrmse"]
 
-    # print("The CV score is: ", score)
+    print("The CV score is: ", score)
