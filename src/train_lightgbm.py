@@ -22,7 +22,11 @@ drop_columns = ["fold", "student_id", "prompt_id", "text", "corrected_text",
 def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
     prompts = pd.read_csv(prompts_path)
     summaries = pd.read_csv(summaries_path)
-    oof_df = pd.read_csv(oof_file_path).rename(columns = {"content" : "pred_content", "wording" : "pred_wording"}).drop(columns = ["prompt_id"])
+    if isinstance(oof_file_path, list):
+        oof_df = [pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id"]) if idx == 1 else  pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id", "fold", "student_id"]) for idx, oof_path in enumerate(oof_file_path, 1)]
+        oof_df = pd.concat(oof_df, axis = 1)
+    else:
+        oof_df = pd.read_csv(oof_file_path).rename(columns = {"content" : "pred_content", "wording" : "pred_wording"}).drop(columns = ["prompt_id"])
     preprocessor = Preprocessor(model_name = model_name)
     df = preprocessor.run(prompts, summaries, mode="train")
     df = df.merge(oof_df, on = "student_id")
@@ -47,7 +51,16 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
                     'objective': 'regression',
                     'metric': 'rmse',
                     'learning_rate': 0.05,
-                }
+            }
+            # params = {
+            #     'metric': 'rmse', 
+            #     'random_state': 42,
+            #     'n_estimators': 20000,
+            #     'reg_alpha': 2.3880775899880753, 'reg_lambda': 4.792213423478227, 'colsample_bytree': 0.8, 'subsample': 0.7, 'learning_rate': 0.008, 'max_depth': 10, 'num_leaves': 818, 'min_child_samples': 128, 'min_data_per_groups': 10,
+            #     'boosting_type': 'gbdt',
+            #     'verbose': -1,
+            # }
+            
             evaluation_results = {}
             model = lgb.train(params,
                             num_boost_round=10000,
@@ -158,18 +171,20 @@ def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path)
     
 
 if __name__ == "__main__":
-    oof_file_path = [
-        "../output/oof_v1.csv",
-        "../output/oof_v2.csv",
-        "../output/oof_v3.csv",
-        "../output/oof_v4.csv",
-        "../output/oof_v5.csv",
-    ]
+    # oof_file_path = [
+    #     "../output/oof_v1.csv",
+    #     # "../output/oof_v2.csv",
+    #     # "../output/oof_v3.csv",
+    #     # "../output/oof_v4.csv",
+    #     # "../output/oof_v5.csv",
+    #     "../output/oof_v7.csv"
+    # ]
+    oof_file_path = "../output/oof.csv"
     df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
                             summaries_path = "../data/summaries_train.csv",
                             model_name = "microsoft/deberta-v3-large", 
                             oof_file_path= oof_file_path)
-    oof_score_deberta = compute_mcrmse(df[["pred_content_1", "pred_wording_1"]].values, df[["content", "wording"]].values)["mcrmse"]
+    oof_score_deberta = compute_mcrmse(df[["pred_content", "pred_wording"]].values, df[["content", "wording"]].values)["mcrmse"]
     print("OOF score model deberta: ", oof_score_deberta)
     study = optuna.create_study(direction='minimize')
     objective = partial(objective, df = df)
@@ -177,11 +192,11 @@ if __name__ == "__main__":
     print('Number of finished trials:', len(study.trials))
     print('Best trial:', study.best_trial.params)
     
-    # score = train_lgb(
-    #     prompts_path = "../data/prompts_train.csv", 
-    #     summaries_path = "../data/summaries_train.csv",
-    #     model_name = "microsoft/deberta-v3-large", 
-    #     oof_file_path= "../output/oof.csv"
-    # )["mcrmse"]
+    score = train_lgb(
+        prompts_path = "../data/prompts_train.csv", 
+        summaries_path = "../data/summaries_train.csv",
+        model_name = "microsoft/deberta-v3-large", 
+        oof_file_path= oof_file_path
+    )["mcrmse"]
 
     # print("The CV score is: ", score)
