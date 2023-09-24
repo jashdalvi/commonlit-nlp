@@ -45,21 +45,21 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
             dtrain = lgb.Dataset(X_train_cv, label=y_train_cv)
             dval = lgb.Dataset(X_eval_cv, label=y_eval_cv)
 
-            # params = {
-            #         'boosting_type': 'gbdt',
-            #         'random_state': 42,
-            #         'objective': 'regression',
-            #         'metric': 'rmse',
-            #         'learning_rate': 0.05,
-            # }
             params = {
-                'boosting_type': 'gbdt',
-                'random_state': 42,
-                'objective': 'regression',
-                'metric': 'rmse',
-                'max_depth': 5, 'learning_rate': 0.08185194910306416, 'lambda_l1': 7.249736223975043e-08, 'lambda_l2': 2.5435724074500937e-07, 'num_leaves': 20,
-                'verbose': -1,
+                    'boosting_type': 'gbdt',
+                    'random_state': 42,
+                    'objective': 'regression',
+                    'metric': 'rmse',
+                    'learning_rate': 0.05,
             }
+            # params = {
+            #     'boosting_type': 'gbdt',
+            #     'random_state': 42,
+            #     'objective': 'regression',
+            #     'metric': 'rmse',
+            #     'max_depth': 5, 'learning_rate': 0.08185194910306416, 'lambda_l1': 7.249736223975043e-08, 'lambda_l2': 2.5435724074500937e-07, 'num_leaves': 20,
+            #     'verbose': -1,
+            # }
             
             evaluation_results = {}
             model = lgb.train(params,
