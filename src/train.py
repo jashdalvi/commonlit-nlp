@@ -7,6 +7,7 @@ from transformers import AutoModel, AutoConfig, AutoTokenizer, get_cosine_schedu
 import pandas as pd
 from torch.cuda.amp import autocast, GradScaler
 from sklearn.metrics import mean_squared_error
+from awp import AWP
 import random
 import time
 from torch.utils import checkpoint
@@ -287,7 +288,7 @@ def main(cfg: DictConfig):
         return optimizer, scheduler
     
 
-    def train(epoch, model, train_loader, optimizer, scheduler, device, scaler):
+    def train(epoch, model, train_loader, optimizer, scheduler, device, scaler, awp = None):
         """training pass"""
         model.train()
         losses = AverageMeter()
@@ -308,6 +309,9 @@ def main(cfg: DictConfig):
             
             losses.update(loss.item() * cfg.gradient_accumulation_steps , cfg.batch_size)
             scaler.scale(loss).backward()
+
+            if cfg.use_awp:
+                awp.attack_backward(batch, epoch)
 
             if (batch_idx + 1) % cfg.gradient_accumulation_steps == 0:
                 scaler.unscale_(optimizer)
@@ -475,10 +479,22 @@ def main(cfg: DictConfig):
 
         scaler = GradScaler()
         global best_models_dict
+
+        if cfg.use_awp:
+            awp = AWP(model,
+                optimizer,
+                adv_lr=cfg.adv_lr,
+                adv_eps=cfg.adv_eps,
+                start_epoch=cfg.awp_start_epoch,
+                loss_fn=criterion,
+                scaler=scaler
+            )
+        else:
+            awp = None
         # Training loop
         for epoch in range(cfg.epochs):
             print(f"FOLD : {fold}, EPOCH: {epoch + 1}")
-            train_loss = train(epoch, model, train_loader, optimizer, scheduler, cfg.device, scaler)
+            train_loss = train(epoch, model, train_loader, optimizer, scheduler, cfg.device, scaler, awp)
             valid_score, valid_loss = evaluate(epoch, model, valid_loader, cfg.device)
             print(f"\nValidation Metrics: {valid_score}")
             if cfg.use_wandb:
