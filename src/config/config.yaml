@@ -34,8 +34,8 @@ use_prompt_text: False
 columns_to_use: ["text", "prompt_title","prompt_question", "prompt_text"]
 compile: False
 use_awp: True
-awp_start_epoch: 1
-adv_lr: 1
+awp_start_epoch: 2
+adv_lr: 1e-5
 adv_eps: 1e-3
 criterion: "rmse"
 pooling: "cls"

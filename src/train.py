@@ -233,7 +233,9 @@ def main(cfg: DictConfig):
     
     def get_grouped_parameters(model, num_train_steps):
         """get optimizer and scheduler"""
-        no_decay = ["bias", "LayerNorm.weight"]
+        ## Based on Gezi implementation
+        # I think the layernorm weights and rel embeddings are tied to each layer
+        no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
         optimizer_params = [
             {
                 "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and "transformer" not in n],
@@ -246,22 +248,9 @@ def main(cfg: DictConfig):
                 "lr" : cfg.lr
             }
         ]
-        # There are three extra layers in the transformer model at the end
-        last_three_layer_names = ["transformer.encoder.rel_embeddings.weight", "transformer.encoder.LayerNorm.weight","transformer.encoder.LayerNorm.bias"]
-        optimizer_params += [
-            {
-                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
-                "weight_decay": 0.001,
-                "lr" : cfg.lr
-            },
-            {
-                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
-                "weight_decay": 0.0,
-                "lr" : cfg.lr
-            }
-        ]
+        
         lr = cfg.lr
-        layers = [model.transformer.embeddings] + list(model.transformer.encoder.layer)
+        layers = list(model.transformer.encoder.layer)
         layers.reverse()
         for layer in layers:
             optimizer_params += [
@@ -277,6 +266,33 @@ def main(cfg: DictConfig):
                 }
             ]
             lr *= cfg.llrd
+        optimizer_params += [
+                {
+                    "params": [p for n, p in model.transformer.embeddings.named_parameters() if not any(nd in n for nd in no_decay)],
+                    "weight_decay": 0.001,
+                    "lr" : lr
+                },
+                {
+                    "params": [p for n, p in model.transformer.embeddings.named_parameters() if any(nd in n for nd in no_decay)],
+                    "weight_decay": 0.0,
+                    "lr" : lr
+                }
+            ]
+
+        # There are three extra layers in the transformer model at the end
+        last_three_layer_names = ["transformer.encoder.rel_embeddings.weight", "transformer.encoder.LayerNorm.weight","transformer.encoder.LayerNorm.bias"]
+        optimizer_params += [
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
+                "weight_decay": 0.001,
+                "lr" : lr
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay) and any(nd in n for nd in last_three_layer_names)],
+                "weight_decay": 0.0,
+                "lr" : lr
+            }
+        ]
         
         optimizer = torch.optim.AdamW(optimizer_params)
         scheduler = get_cosine_schedule_with_warmup(
