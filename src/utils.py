@@ -242,3 +242,14 @@ class SoftEmbedding(nn.Module):
         input_embedding = self.wte(tokens[:, self.n_tokens:])
         learned_embedding = self.learned_embedding.repeat(input_embedding.size(0), 1, 1)
         return torch.cat([learned_embedding, input_embedding], 1)
+    
+
+# Nosiy tune paper idea
+def noisy_tune(model, noise_lambda = 0.15):
+    for name, param in model.named_parameters():
+        # Skipping the final linear layers for noisy tune
+        if "transformer" not in name:
+            continue
+        model.state_dict()[name][:] += (torch.rand(param.size())-0.5) * noise_lambda * torch.std(param)
+    
+    return model

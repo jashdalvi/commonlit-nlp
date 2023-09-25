@@ -21,7 +21,7 @@ from dataclasses import dataclass, field, asdict
 import wandb
 from tqdm import tqdm
 from dotenv import load_dotenv
-from utils import AverageMeter, compute_mcrmse, MeanPooling, LSTMPooling, CLSPooling, MaxPooling, MeanMaxPooling, ConcatPooling
+from utils import AverageMeter, compute_mcrmse, MeanPooling, LSTMPooling, CLSPooling, MaxPooling, MeanMaxPooling, ConcatPooling, noisy_tune
 import hydra
 from hydra import compose, initialize
 from omegaconf import OmegaConf, DictConfig
@@ -473,6 +473,10 @@ def main(cfg: DictConfig):
         
         # Preparing the model
         model = Model(cfg.model_name, fold)
+        # Nosiy tune method for robust fine tuning
+        if cfg.noisy_tune:
+            model = noisy_tune(model)
+        
         model = model.to(cfg.device)
         if cfg.compile:
             model = torch.compile(model)

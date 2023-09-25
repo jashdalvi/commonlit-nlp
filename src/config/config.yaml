@@ -38,6 +38,7 @@ awp_start_epoch: 2
 adv_lr: 1e-5
 adv_eps: 1e-3
 criterion: "rmse" # rmse, mcrmse, rdrop
+noisy_tune: False
 rdrop_alpha: 1.0
 pooling: "cls"
 concat_pooling: "cls"
