@@ -332,7 +332,7 @@ def main(cfg: DictConfig):
         
         return losses.avg
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate(epoch, model, valid_loader, device):
         """evaluate pass"""
         model.eval()
@@ -358,7 +358,7 @@ def main(cfg: DictConfig):
         score = compute_mcrmse(all_outputs, all_targets)
         return score, losses.avg
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def predict(model, test_loader, device):
         """predict pass for calculating oof values"""
         model.eval()
