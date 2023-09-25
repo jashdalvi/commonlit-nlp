@@ -32,6 +32,7 @@ import json
 from train_lightgbm import train_lgb
 from utils import MeanPooling, LSTMPooling
 from huggingface_hub import login
+from losses import rdrop_loss
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 tqdm.pandas()
@@ -315,6 +316,9 @@ def main(cfg: DictConfig):
             
             with autocast():
                 outputs = model(**batch)
+                if cfg.criterion == "rdrop":
+                    outputs2 = model(**batch)
+                    loss = rdrop_loss(outputs, outputs2, batch["targets"], alpha = cfg.rdrop_alpha)
                 if cfg.criterion == "rmse":
                     loss = criterion(outputs, batch["targets"])
                 else:
@@ -361,7 +365,7 @@ def main(cfg: DictConfig):
                 batch[k] = v.to(device)
             
             outputs = model(**batch)
-            if cfg.criterion == "rmse":
+            if cfg.criterion == "rmse" or cfg.criterion == "rdrop":
                 loss = criterion(outputs, batch["targets"])
             else:
                 loss = criterion_mcrmse(outputs, batch["targets"])

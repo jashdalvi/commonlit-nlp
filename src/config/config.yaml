@@ -37,7 +37,8 @@ use_awp: True
 awp_start_epoch: 2
 adv_lr: 1e-5
 adv_eps: 1e-3
-criterion: "rmse"
+criterion: "rmse" # rmse, mcrmse, rdrop
+rdrop_alpha: 1.0
 pooling: "cls"
 concat_pooling: "cls"
 use_gpl_checkpoint: False
