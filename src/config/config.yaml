@@ -4,11 +4,11 @@ hydra:
 
 train_summary_file: "../data/summaries_train.csv"
 train_prompt_file : "../data/prompts_train.csv"
-batch_size: 8
+batch_size: 16
 epochs: 4
 lr: 2e-5
-max_len: 1024
-model_name: "microsoft/deberta-v3-large"
+max_len: 512
+model_name: "roberta-large"
 hidden_dropout_prob: 0.1
 layer_norm_eps: 1e-7
 gradient_accumulation_steps: 1
@@ -31,13 +31,13 @@ llrd: 1
 train_whole_dataset: False
 correct_spelling: False
 use_prompt_text: False
-columns_to_use: ["text", "prompt_title","prompt_question", "prompt_text"]
+columns_to_use: ["text", "prompt_text"]
 compile: False
-use_awp: True
+use_awp: False
 awp_start_epoch: 2
 adv_lr: 1e-5
 adv_eps: 1e-3
-criterion: "rmse" # rmse, mcrmse, rdrop
+criterion: "mcrmse" # rmse, mcrmse, rdrop
 noisy_tune: False
 rdrop_alpha: 1.0
 pooling: "cls"
