@@ -8,7 +8,7 @@ batch_size: 16
 epochs: 4
 lr: 2e-5
 max_len: 512
-model_name: "roberta-large"
+model_name: "microsoft/deberta-v3-large"
 hidden_dropout_prob: 0.1
 layer_norm_eps: 1e-7
 gradient_accumulation_steps: 1
@@ -37,9 +37,11 @@ use_awp: False
 awp_start_epoch: 2
 adv_lr: 1e-5
 adv_eps: 1e-3
-criterion: "mcrmse" # rmse, mcrmse, rdrop
+criterion: "rmse" # rmse, mcrmse, rdrop
 noisy_tune: False
 rdrop_alpha: 1.0
+add_rank_loss: False
+rank_loss_weight: 0.1
 pooling: "cls"
 concat_pooling: "cls"
 use_gpl_checkpoint: False

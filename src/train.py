@@ -32,7 +32,7 @@ import json
 from train_lightgbm import train_lgb
 from utils import MeanPooling, LSTMPooling
 from huggingface_hub import login
-from losses import rdrop_loss
+from losses import rdrop_loss, rank_loss
 transformers.logging.set_verbosity_error()
 warnings.filterwarnings("ignore")
 tqdm.pandas()
@@ -323,6 +323,9 @@ def main(cfg: DictConfig):
                     loss = criterion(outputs, batch["targets"])
                 else:
                     loss = criterion_mcrmse(outputs, batch["targets"])
+
+                if cfg.add_rank_loss:
+                    loss += cfg.rank_loss_weight * rank_loss(outputs, batch["targets"])
             
             if cfg.gradient_accumulation_steps > 1:
                 loss = loss / cfg.gradient_accumulation_steps
