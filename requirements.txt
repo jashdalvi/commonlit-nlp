@@ -18,3 +18,4 @@ gpl
 optuna
 textdistance
 textstat
+beautifulsoup4

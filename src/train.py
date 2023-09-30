@@ -21,7 +21,7 @@ from dataclasses import dataclass, field, asdict
 import wandb
 from tqdm import tqdm
 from dotenv import load_dotenv
-from utils import AverageMeter, compute_mcrmse, MeanPooling, LSTMPooling, CLSPooling, MaxPooling, MeanMaxPooling, ConcatPooling, noisy_tune
+from utils import AverageMeter, compute_mcrmse, MeanPooling, LSTMPooling, CLSPooling, MaxPooling, MeanMaxPooling, ConcatPooling, noisy_tune, text_cleaning
 import hydra
 from hydra import compose, initialize
 from omegaconf import OmegaConf, DictConfig
@@ -403,14 +403,25 @@ def main(cfg: DictConfig):
             columns = ["prompt_title","prompt_question", "corrected_text"]
         else:
             columns = ["prompt_title","prompt_question", "text"]
-        texts = [row[col] for col in columns]
-        if cfg.use_prompt_text:
-            texts.append(row["prompt_text"])
         
-        # Use specified columns
-        if len(cfg.columns_to_use) > 0:
-            columns = cfg.columns_to_use
+        if cfg.clean_text:
+            texts = [text_cleaning(row[col]) if "prompt" in col else row[col] for col in columns]
+            if cfg.use_prompt_text:
+                texts.append(text_cleaning(row["prompt_text"]))
+        
+            # Use specified columns
+            if len(cfg.columns_to_use) > 0:
+                columns = cfg.columns_to_use
+                texts = [text_cleaning(row[col]) if "prompt" in col else row[col] for col in columns]
+        else:
             texts = [row[col] for col in columns]
+            if cfg.use_prompt_text:
+                texts.append(row["prompt_text"])
+        
+            # Use specified columns
+            if len(cfg.columns_to_use) > 0:
+                columns = cfg.columns_to_use
+                texts = [row[col] for col in columns]
         
         full_text = f" {sep_token} ".join(texts)
         row["full_text"] = full_text
@@ -454,6 +465,7 @@ def main(cfg: DictConfig):
     #     valid_texts = valid_df["text"].to_list()
         train_texts = train_df.progress_apply(get_full_text, args = (sep_token, ), axis = 1)["full_text"].to_list()
         valid_texts = valid_df.progress_apply(get_full_text, args = (sep_token, ), axis = 1)["full_text"].to_list()
+
         train_targets = train_df[list(cfg.target_columns)].values.tolist()
         valid_targets = valid_df[list(cfg.target_columns)].values.tolist()
 
