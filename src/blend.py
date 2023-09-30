@@ -53,7 +53,7 @@ def main(oof_paths):
     for seed in range(5):
 
         study = optuna.create_study(direction="minimize", sampler=TPESampler(seed=seed))
-        study.optimize(objective, n_trials=1000, n_jobs=4, show_progress_bar = True)
+        study.optimize(objective, n_trials=10, n_jobs=4, show_progress_bar = True)
 
         best_params.append(study.best_params)
         best_scores.append(study.best_value)
@@ -70,15 +70,17 @@ if __name__ == "__main__":
     # oof v6: deberta v3 large 1800
     # oof v7: deberta v3 large 1024 mse 
     # oof v8: deberta large mnli 512 mcrmse
+    # oof v9: deberta v3 large 1024 mean pool
     # OOF paths
     oof_paths = [
         "../output/oof_v1.csv",
-        "../output/oof_v2.csv",
-        "../output/oof_v3.csv",
-        "../output/oof_v4.csv",
-        "../output/oof_v5.csv",
+        # "../output/oof_v2.csv",
+        # "../output/oof_v3.csv",
+        # "../output/oof_v4.csv",
+        # "../output/oof_v5.csv",
         "../output/oof_v7.csv",
-        "../output/oof_v8.csv",
+        # "../output/oof_v8.csv",
+        "../output/oof_v9.csv",
     ]
     best_params, best_scores, avg_score = main(oof_paths)
 
@@ -91,33 +93,63 @@ if __name__ == "__main__":
     print(f"The average score is {avg_score}")
     print("***"* 50)
 
-    # Loading the actual targets and prompt and summary file
-    pdf = pd.read_csv("../data/prompts_train.csv")
-    sdf = pd.read_csv("../data/summaries_train.csv")
-    df = pdf.merge(sdf, on="prompt_id")
+    if avg_score < best_scores[best_idx]:
+         # Loading the actual targets and prompt and summary file
+        pdf = pd.read_csv("../data/prompts_train.csv")
+        sdf = pd.read_csv("../data/summaries_train.csv")
+        df = pdf.merge(sdf, on="prompt_id")
 
-    oofs = [
-        pd.read_csv(oof_path) for oof_path in oof_paths
-    ]
+        oofs = [
+            pd.read_csv(oof_path) for oof_path in oof_paths
+        ]
 
-    for oof in oofs:
-        assert all([x == y for x, y in zip(oof["student_id"].to_list(), df["student_id"].to_list())])
+        for oof in oofs:
+            assert all([x == y for x, y in zip(oof["student_id"].to_list(), df["student_id"].to_list())])
 
-    target_columns = ['content', 'wording']
+        target_columns = ['content', 'wording']
 
-    best_param = best_params[best_idx]
-    # best_param = {'w1_0': 0.6947302511269289, 'w1_1': 0.6639292761466956, 'w2_0': 0.5966504446856765, 'w2_1': 0.028682039728677812, 'w3_0': -0.2993895027547027, 'w3_1': -0.23320086908303095, 'w4_0': 0.2772219415312553, 'w4_1': 0.4656334430730368, 'w5_0': -0.3409878557307244, 'w5_1': 0.013978204062719768}
-    weights = []
-    for i in range(1, len(oofs) + 1):
-        weights.append([best_param[f'w{i}_{j}'] for j in range(2)])
-    weights = np.array(weights)
-    for i in range(len(oofs)):
-        if i == 0:
-            outputs = weights[i, :] * oofs[i][list(target_columns)].values
-        else:
-            outputs += weights[i, :] * oofs[i][list(target_columns)].values
+        final_oof = oofs[0].copy()
+        for col in target_columns:
+            final_oof[col] = 0
+        
+        for i in range(len(oofs)):
+            if i == 0:
+                final_oof[target_columns] = oofs[i][list(target_columns)].values
+            else:
+                final_oof[target_columns] += oofs[i][list(target_columns)].values
 
-    oof_df = oofs[0].copy()
-    oof_df[list(target_columns)] = outputs
-    # Saving the new oof file for training lgb model
-    oof_df.to_csv("../output/oof.csv", index=False)
+        final_oof[target_columns] /= len(oofs)
+
+        final_oof.to_csv("../output/oof.csv", index=False)
+    else:
+
+        # Loading the actual targets and prompt and summary file
+        pdf = pd.read_csv("../data/prompts_train.csv")
+        sdf = pd.read_csv("../data/summaries_train.csv")
+        df = pdf.merge(sdf, on="prompt_id")
+
+        oofs = [
+            pd.read_csv(oof_path) for oof_path in oof_paths
+        ]
+
+        for oof in oofs:
+            assert all([x == y for x, y in zip(oof["student_id"].to_list(), df["student_id"].to_list())])
+
+        target_columns = ['content', 'wording']
+
+        best_param = best_params[best_idx]
+        # best_param = {'w1_0': 0.6947302511269289, 'w1_1': 0.6639292761466956, 'w2_0': 0.5966504446856765, 'w2_1': 0.028682039728677812, 'w3_0': -0.2993895027547027, 'w3_1': -0.23320086908303095, 'w4_0': 0.2772219415312553, 'w4_1': 0.4656334430730368, 'w5_0': -0.3409878557307244, 'w5_1': 0.013978204062719768}
+        weights = []
+        for i in range(1, len(oofs) + 1):
+            weights.append([best_param[f'w{i}_{j}'] for j in range(2)])
+        weights = np.array(weights)
+        for i in range(len(oofs)):
+            if i == 0:
+                outputs = weights[i, :] * oofs[i][list(target_columns)].values
+            else:
+                outputs += weights[i, :] * oofs[i][list(target_columns)].values
+
+        oof_df = oofs[0].copy()
+        oof_df[list(target_columns)] = outputs
+        # Saving the new oof file for training lgb model
+        oof_df.to_csv("../output/oof.csv", index=False)
