@@ -33,6 +33,13 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path, metadata_
         # Clear the nan values
         grade_col = 'grade'
         prompts[grade_col] = prompts[grade_col].fillna(0).astype(int).astype('category')
+    else:
+        # Changing the drop columns if not using metadata
+        global drop_columns
+        drop_columns = ["fold", "student_id", "prompt_id", "text", "corrected_text",
+                "prompt_question", "prompt_title", 
+                "prompt_text"
+               ] + targets
     summaries = pd.read_csv(summaries_path)
     if isinstance(oof_file_path, list):
         oof_df = [pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id"]) if idx == 1 else  pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id", "fold", "student_id"]) for idx, oof_path in enumerate(oof_file_path, 1)]
@@ -196,12 +203,20 @@ def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path,
         # Clear the nan values
         grade_col = 'grade'
         prompts[grade_col] = prompts[grade_col].fillna(0).astype(int).astype('category')
+    else:
+        # Changing the drop columns if not using metadata
+        global drop_columns
+        drop_columns = ["fold", "student_id", "prompt_id", "text", "corrected_text",
+                "prompt_question", "prompt_title", 
+                "prompt_text"
+               ] + targets
     summaries = pd.read_csv(summaries_path)
     if isinstance(oof_file_path, list):
         oof_df = [pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id"]) if idx == 1 else  pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id", "fold", "student_id"]) for idx, oof_path in enumerate(oof_file_path, 1)]
         oof_df = pd.concat(oof_df, axis = 1)
     else:
         oof_df = pd.read_csv(oof_file_path).rename(columns = {"content" : "pred_content", "wording" : "pred_wording"}).drop(columns = ["prompt_id"])
+    
     preprocessor = Preprocessor(model_name = model_name)
     df = preprocessor.run(prompts, summaries, mode="train")
     df = df.merge(oof_df, on = "student_id")
