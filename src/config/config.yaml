@@ -4,11 +4,11 @@ hydra:
 
 train_summary_file: "../data/summaries_train.csv"
 train_prompt_file : "../data/prompts_train.csv"
-batch_size: 6
+batch_size: 8
 epochs: 4
 lr: 2e-5
 max_len: 1024
-model_name: "microsoft/deberta-large-mnli"
+model_name: "microsoft/deberta-v3-large"
 hidden_dropout_prob: 0.1
 layer_norm_eps: 1e-7
 gradient_accumulation_steps: 1
