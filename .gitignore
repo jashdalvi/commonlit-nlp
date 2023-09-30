@@ -5,3 +5,4 @@ wandb/
 .env
 __pycache__/
 gpl_data/
+data/commonlit_texts.csv

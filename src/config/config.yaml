@@ -22,6 +22,7 @@ device: "cuda"
 multi_gpu: False
 use_wandb: True
 project_name: "commonlit-kaggle"
+metadata_path: "../data/commonlit_texts.csv"
 output_dir: "../output/"
 repo_id: ""
 freeze: True

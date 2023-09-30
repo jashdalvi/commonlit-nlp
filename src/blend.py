@@ -61,20 +61,24 @@ def main(oof_paths):
     return best_params, best_scores, avg_score
 
 if __name__ == "__main__":
-    # Human readable model oofs
+    # # Human readable model oofs
     # oof_v1: deberta v3 large 1024
     # oof_v2: deberta v3 large 512
     # oof_v3: deberta v3 base 512
     # oof v4: roberta large 512
     # oof v5: electra large 512
+    # oof v6: deberta v3 large 1800
+    # oof v7: deberta v3 large 1024 mse 
+    # oof v8: deberta large mnli 512 mcrmse
     # OOF paths
     oof_paths = [
         "../output/oof_v1.csv",
-        # "../output/oof_v2.csv",
+        "../output/oof_v2.csv",
         "../output/oof_v3.csv",
-        # "../output/oof_v4.csv",
-        # "../output/oof_v5.csv",
+        "../output/oof_v4.csv",
+        "../output/oof_v5.csv",
         "../output/oof_v7.csv",
+        "../output/oof_v8.csv",
     ]
     best_params, best_scores, avg_score = main(oof_paths)
 

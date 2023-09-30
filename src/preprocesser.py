@@ -10,6 +10,14 @@ import numpy as np
 from nltk.tokenize import word_tokenize
 import textdistance
 import textstat
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+from collections import Counter
+from nltk import ne_chunk, word_tokenize, pos_tag
+from nltk.sentiment import SentimentIntensityAnalyzer
 
 class Preprocessor:
     def __init__(self, 
@@ -210,3 +218,47 @@ class Preprocessor:
         input_df = self.get_stat_features(input_df)
         
         return input_df.drop(columns=["summary_tokens", "prompt_tokens"])
+    
+
+## Writing a feature engineering class for additional features
+# Load Spacy model
+nlp = spacy.load('en_core_web_sm')
+
+class FeatureEngineering:
+    
+    def __init__(self, df):
+        self.df = df
+        self.df['grade'].fillna(0, inplace=True)  # Fill NA values in 'grade' with 0
+        self.df['lexile'].fillna(985.6110260336907, inplace = True)  # Fill NA values in 'lexile' with mean value
+
+    def classify_author(self, author):
+        doc = nlp(author)
+        for ent in doc.ents:
+            if ent.label_ == 'PERSON':
+                return 'person'
+        return 'org'
+
+    def encode_author_type(self):
+        self.df['author_type'] = self.df['author'].apply(self.classify_author)
+        le = LabelEncoder()
+        self.df['author_type'] = le.fit_transform(self.df['author_type'])
+
+    def frequency_encoding(self):
+        self.df['author_frequency'] = self.df['author'].map(self.df['author'].value_counts())
+
+    def one_hot_encoding(self):
+        onehot_encoder = OneHotEncoder(sparse=False)
+        genre_onehot = onehot_encoder.fit_transform(self.df[['genre']])
+        df_onehot = pd.DataFrame(genre_onehot, columns=onehot_encoder.get_feature_names_out(['genre']))
+        self.df = pd.concat([self.df, df_onehot], axis=1)
+
+    def feature_scaling(self):
+        scaler = StandardScaler()
+        self.df['lexile_scaled'] = scaler.fit_transform(self.df[['lexile']])
+
+    def transform(self):
+        self.encode_author_type()
+        self.frequency_encoding()
+#         self.one_hot_encoding()
+        self.feature_scaling()
+        return self.df

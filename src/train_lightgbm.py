@@ -1,5 +1,5 @@
 import pandas as pd
-from preprocesser import Preprocessor
+from preprocesser import Preprocessor, FeatureEngineering
 from tqdm import tqdm
 import lightgbm as lgb
 from utils import compute_mcrmse
@@ -17,10 +17,22 @@ targets = ["content", "wording"]
 drop_columns = ["fold", "student_id", "prompt_id", "text", "corrected_text",
                 "prompt_question", "prompt_title", 
                 "prompt_text"
-               ] + targets
+               ] + targets + ["title", "author", "description", "genre"]
 
-def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
+def train_lgb(prompts_path, summaries_path, model_name, oof_file_path, metadata_path = "../data/commonlit_texts.csv", use_metadata = True):
     prompts = pd.read_csv(prompts_path)
+    if use_metadata:
+        meta_columns = ['title','author','description','grade','genre','lexile','lexile_scaled','is_prose','author_type','author_frequency']
+        # Adding metadata
+        meta = FeatureEngineering(pd.read_csv(metadata_path)).transform()[meta_columns]
+        prompts["prompt_title"] = prompts["prompt_title"].str.replace('"', '').str.strip()
+        meta["title"] = meta["title"].str.replace('"', '').str.strip()
+        # Remove duplicate grades
+        meta = meta.drop_duplicates(subset="title", keep='first')
+        prompts = prompts.merge(meta, how='left', left_on="prompt_title", right_on="title")
+        # Clear the nan values
+        grade_col = 'grade'
+        prompts[grade_col] = prompts[grade_col].fillna(0).astype(int).astype('category')
     summaries = pd.read_csv(summaries_path)
     if isinstance(oof_file_path, list):
         oof_df = [pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id"]) if idx == 1 else  pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id", "fold", "student_id"]) for idx, oof_path in enumerate(oof_file_path, 1)]
@@ -57,7 +69,7 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path):
             #     'random_state': 42,
             #     'objective': 'regression',
             #     'metric': 'rmse',
-            #     'max_depth': 5, 'learning_rate': 0.08185194910306416, 'lambda_l1': 7.249736223975043e-08, 'lambda_l2': 2.5435724074500937e-07, 'num_leaves': 20,
+            #     'max_depth': 5, 'learning_rate': 0.054705048153426784, 'lambda_l1': 8.546845260981295e-08, 'lambda_l2': 7.88236446963996e-08, 'num_leaves': 20,
             #     'verbose': -1,
             # }
             
@@ -170,8 +182,20 @@ def objective(trial, df):
     mcrmse = score["mcrmse"]
     return mcrmse
 
-def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path):
+def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path, metadata_path = "../data/commonlit_texts.csv", use_metadata = True):
     prompts = pd.read_csv(prompts_path)
+    if  use_metadata:
+        meta_columns = ['title','author','description','grade','genre','lexile','lexile_scaled','is_prose','author_type','author_frequency']
+        # Adding metadata
+        meta = FeatureEngineering(pd.read_csv(metadata_path)).transform()[meta_columns]
+        prompts["prompt_title"] = prompts["prompt_title"].str.replace('"', '').str.strip()
+        meta["title"] = meta["title"].str.replace('"', '').str.strip()
+        # Remove duplicate grades
+        meta = meta.drop_duplicates(subset="title", keep='first')
+        prompts = prompts.merge(meta, how='left', left_on="prompt_title", right_on="title")
+        # Clear the nan values
+        grade_col = 'grade'
+        prompts[grade_col] = prompts[grade_col].fillna(0).astype(int).astype('category')
     summaries = pd.read_csv(summaries_path)
     if isinstance(oof_file_path, list):
         oof_df = [pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id"]) if idx == 1 else  pd.read_csv(oof_path).rename(columns = {"content" : f"pred_content_{idx}", "wording" : f"pred_wording_{idx}"}).drop(columns = ["prompt_id", "fold", "student_id"]) for idx, oof_path in enumerate(oof_file_path, 1)]
@@ -181,6 +205,8 @@ def get_preprocessed_df(prompts_path, summaries_path, model_name, oof_file_path)
     preprocessor = Preprocessor(model_name = model_name)
     df = preprocessor.run(prompts, summaries, mode="train")
     df = df.merge(oof_df, on = "student_id")
+
+    
     return df
     
 
@@ -193,32 +219,34 @@ if __name__ == "__main__":
     # oof v5: electra large 512
     # oof v6: deberta v3 large 1800
     # oof v7: deberta v3 large 1024 mse 
+    # oof v8: deberta large mnli 512 mcrmse
     oof_file_path = [
         "../output/oof_v1.csv",
         "../output/oof_v2.csv",
         "../output/oof_v3.csv",
         "../output/oof_v4.csv",
         "../output/oof_v5.csv",
-        "../output/oof_v7.csv"
+        "../output/oof_v7.csv",
+        "../output/oof_v8.csv",
     ]
     # oof_file_path = "../output/oof.csv"
-    # df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
-    #                         summaries_path = "../data/summaries_train.csv",
-    #                         model_name = "microsoft/deberta-v3-large", 
-    #                         oof_file_path= oof_file_path)
-    # oof_score_deberta = compute_mcrmse(df[["pred_content_6", "pred_wording_6"]].values, df[["content", "wording"]].values)["mcrmse"]
-    # print("OOF score model deberta: ", oof_score_deberta)
-    # study = optuna.create_study(direction='minimize')
-    # objective = partial(objective, df = df)
-    # study.optimize(objective, n_trials=200)
-    # print('Number of finished trials:', len(study.trials))
-    # print('Best trial:', study.best_trial.params)
+    df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
+                            summaries_path = "../data/summaries_train.csv",
+                            model_name = "microsoft/deberta-v3-large", 
+                            oof_file_path= oof_file_path)
+    oof_score_deberta = compute_mcrmse(df[["pred_content_6", "pred_wording_6"]].values, df[["content", "wording"]].values)["mcrmse"]
+    print("OOF score model deberta: ", oof_score_deberta)
+    study = optuna.create_study(direction='minimize')
+    objective = partial(objective, df = df)
+    study.optimize(objective, n_trials=200)
+    print('Number of finished trials:', len(study.trials))
+    print('Best trial:', study.best_trial.params)
     
-    score = train_lgb(
-        prompts_path = "../data/prompts_train.csv", 
-        summaries_path = "../data/summaries_train.csv",
-        model_name = "microsoft/deberta-v3-large", 
-        oof_file_path= oof_file_path
-    )["mcrmse"]
+    # score = train_lgb(
+    #     prompts_path = "../data/prompts_train.csv", 
+    #     summaries_path = "../data/summaries_train.csv",
+    #     model_name = "microsoft/deberta-v3-large", 
+    #     oof_file_path= oof_file_path
+    # )["mcrmse"]
 
-    print("The CV score is: ", score)
+    # print("The CV score is: ", score)

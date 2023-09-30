@@ -687,7 +687,8 @@ def main(cfg: DictConfig):
         prompts_path = cfg.train_prompt_file,
         summaries_path = cfg.train_summary_file,
         model_name = cfg.model_name,
-        oof_file_path = os.path.join(cfg.output_dir, "oof.csv")
+        oof_file_path = os.path.join(cfg.output_dir, "oof.csv"),
+        use_metadata= os.path.exists(cfg.metadata_path),
     )["mcrmse"])
 
     print(f"CV after LGBM : {cv:.4f}")
