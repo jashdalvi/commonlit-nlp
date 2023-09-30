@@ -89,9 +89,19 @@ def main(cfg: DictConfig):
             if self.tokenizer.padding_side == "right":
                 output["ids"] = [s + [self.tokenizer.pad_token_id] * (batch_len - len(s)) for s in output["ids"]]
                 output["mask"] = [s + [0] * (batch_len - len(s)) for s in output["mask"]]
+
+                # Add padding to multiple of 8 for faster training
+                if len(output["ids"]) % 8 != 0:
+                    output["ids"] = [s + [self.tokenizer.pad_token_id] * (8 - (len(s) % 8)) for s in output["ids"]]
+                    output["mask"] = [s + [0] * (8 - (len(s) % 8)) for s in output["mask"]]
             else:
                 output["ids"] = [[self.tokenizer.pad_token_id] * (batch_len - len(s)) + s for s in output["ids"]]
                 output["mask"] = [[0] * (batch_len - len(s)) + s for s in output["mask"]]
+
+                # Add padding to multiple of 8 for faster training
+                if (len(output["ids"]) % 8) != 0:
+                    output["ids"] = [[self.tokenizer.pad_token_id] * (8 - (len(s) % 8)) + s for s in output["ids"]]
+                    output["mask"] = [[0] * (8 - (len(s) % 8)) + s for s in output["mask"]]
                 
                 
             output["ids"] = torch.tensor(output["ids"], dtype = torch.long)
