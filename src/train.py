@@ -149,6 +149,7 @@ def main(cfg: DictConfig):
                     "layer_norm_eps": cfg.layer_norm_eps,
                     "add_pooling_layer": False,
                     "num_labels": cfg.num_classes,
+                    "max_position_embeddings": cfg.max_len,
                 }
             )
             
