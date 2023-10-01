@@ -53,7 +53,7 @@ def main(oof_paths):
     for seed in range(5):
 
         study = optuna.create_study(direction="minimize", sampler=TPESampler(seed=seed))
-        study.optimize(objective, n_trials=10, n_jobs=4, show_progress_bar = True)
+        study.optimize(objective, n_trials=1000, n_jobs=4, show_progress_bar = True)
 
         best_params.append(study.best_params)
         best_scores.append(study.best_value)
@@ -81,6 +81,8 @@ if __name__ == "__main__":
         "../output/oof_v7.csv",
         # "../output/oof_v8.csv",
         "../output/oof_v9.csv",
+        "../output/oof_v11.csv"
+        # "../output/oof_v10.csv",
     ]
     best_params, best_scores, avg_score = main(oof_paths)
 
