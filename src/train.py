@@ -149,7 +149,7 @@ def main(cfg: DictConfig):
                     "layer_norm_eps": cfg.layer_norm_eps,
                     "add_pooling_layer": False,
                     "num_labels": cfg.num_classes,
-                    "max_position_embeddings": cfg.max_len,
+                    "max_position_embeddings": 1024,
                 }
             )
             
@@ -493,7 +493,7 @@ def main(cfg: DictConfig):
 
         valid_loader = torch.utils.data.DataLoader(
             valid_ds,
-            batch_size = cfg.batch_size,
+            batch_size = cfg.valid_batch_size,
             shuffle = False,
             collate_fn = collate_fn)
         
@@ -672,7 +672,7 @@ def main(cfg: DictConfig):
             test_ds = Dataset(test_texts, test_targets, tokenizer)
             test_loader = torch.utils.data.DataLoader(
                             test_ds,
-                            batch_size = cfg.batch_size,
+                            batch_size = cfg.valid_batch_size,
                             shuffle = False,
                             collate_fn = collate_fn,
                             drop_last = False)
