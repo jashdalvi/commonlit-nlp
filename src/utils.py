@@ -284,7 +284,7 @@ def text_cleaning(text):
                                "]+", flags=re.UNICODE)
     text = emoji_pattern.sub(r'', text)
 
-    text = re.sub(r"[^a-zA-Z\d]", " ", text) # Remove special Charecters
+    # text = re.sub(r"[^a-zA-Z\d]", " ", text) # Remove special Charecters
     text = re.sub('\n+', '\n', text) 
     text = re.sub('\.+', '.', text) 
     text = re.sub(' +', ' ', text) # Remove Extra Spaces 
