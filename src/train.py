@@ -416,14 +416,14 @@ def main(cfg: DictConfig):
             columns = ["prompt_title","prompt_question", "text"]
         
         if cfg.clean_text:
-            texts = [text_cleaning(row[col]) if "prompt" in col else row[col] for col in columns]
+            texts = [text_cleaning(row[col]) for col in columns]
             if cfg.use_prompt_text:
                 texts.append(text_cleaning(row["prompt_text"]))
         
             # Use specified columns
             if len(cfg.columns_to_use) > 0:
                 columns = cfg.columns_to_use
-                texts = [text_cleaning(row[col]) if "prompt" in col else row[col] for col in columns]
+                texts = [text_cleaning(row[col]) for col in columns]
         else:
             texts = [row[col] for col in columns]
             if cfg.use_prompt_text:
