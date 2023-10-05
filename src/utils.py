@@ -288,5 +288,9 @@ def text_cleaning(text):
     text = re.sub('\n+', '\n', text) 
     text = re.sub('\.+', '.', text) 
     text = re.sub(' +', ' ', text) # Remove Extra Spaces 
+    text = re.sub("¨", '"', text)
+    text = re.sub("’", "'", text)
+    text = re.sub("´", "'", text)
+    text = re.sub("' '", '"', text)
 
     return text

@@ -76,7 +76,7 @@ def train_lgb(prompts_path, summaries_path, model_name, oof_file_path, metadata_
                 'random_state': 40,
                 'objective': 'regression',
                 'metric': 'rmse',
-                'max_depth': 3, 'learning_rate': 0.08960968899596368, 'lambda_l1': 2.5732913970931787e-08, 'lambda_l2': 1.3196934625962528e-06, 'num_leaves': 7,
+                'max_depth': 4, 'learning_rate': 0.09133930070326705, 'lambda_l1': 1.8987679922959206e-06, 'lambda_l2': 0.000635920464267797, 'num_leaves': 12,
                 'verbose': -1,
             }
             
@@ -239,6 +239,7 @@ if __name__ == "__main__":
     # oof v10: deberta v3 large 1024 lstm pool
     # oof v11: deberta v3 large 1024 cls pool - cv 0.479 - max position embeddings 1024 (max len)
     # oof v12: deberta v3 large 1024 mean pool - cv 0.496 - max position embeddings 1024 (max len)
+    # oof v13: deberta v3 large 1024 concat pool - cv 0.485 - max position embeddings 1024 (max len)
     oof_file_path = [
         "../output/oof_v1.csv",
         # "../output/oof_v2.csv",
@@ -249,28 +250,31 @@ if __name__ == "__main__":
         "../output/oof_v8.csv",
         # "../output/oof_v9.csv",
         "../output/oof_v11.csv",
-        "../output/oof_v12.csv"
+        "../output/oof_v12.csv",
+        "../output/oof_v13.csv",
+        
         # "../output/oof_v10.csv",
     ]
-    # oof_file_path = "../output/oof.csv"
-    df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
-                            summaries_path = "../data/summaries_train.csv",
-                            model_name = "microsoft/deberta-v3-large", 
-                            oof_file_path= oof_file_path,
-                            use_metadata=False)
-    oof_score_deberta = compute_mcrmse(df[["pred_content_4", "pred_wording_4"]].values, df[["content", "wording"]].values)["mcrmse"]
-    print("OOF score model deberta: ", oof_score_deberta)
-    study = optuna.create_study(direction='minimize')
-    objective = partial(objective, df = df)
-    study.optimize(objective, n_trials=200)
-    print('Number of finished trials:', len(study.trials))
-    print('Best trial:', study.best_trial.params)
+    oof_file_path = "../output/oof.csv"
+    # df = get_preprocessed_df(prompts_path = "../data/prompts_train.csv", 
+    #                         summaries_path = "../data/summaries_train.csv",
+    #                         model_name = "microsoft/deberta-v3-large", 
+    #                         oof_file_path= oof_file_path,
+    #                         use_metadata=True)
+    # oof_score_deberta = compute_mcrmse(df[["pred_content", "pred_wording"]].values, df[["content", "wording"]].values)["mcrmse"]
+    # print("OOF score model deberta: ", oof_score_deberta)
+    # study = optuna.create_study(direction='minimize')
+    # objective = partial(objective, df = df)
+    # study.optimize(objective, n_trials=200)
+    # print('Number of finished trials:', len(study.trials))
+    # print('Best trial:', study.best_trial.params)
     
-    # score = train_lgb(
-    #     prompts_path = "../data/prompts_train.csv", 
-    #     summaries_path = "../data/summaries_train.csv",
-    #     model_name = "microsoft/deberta-v3-large", 
-    #     oof_file_path= oof_file_path,
-    # )["mcrmse"]
+    score = train_lgb(
+        prompts_path = "../data/prompts_train.csv", 
+        summaries_path = "../data/summaries_train.csv",
+        model_name = "microsoft/deberta-v3-large", 
+        oof_file_path= oof_file_path,
+        use_metadata=True
+    )["mcrmse"]
 
-    # print("The CV score is: ", score)
+    print("The CV score is: ", score)

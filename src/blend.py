@@ -62,26 +62,32 @@ def main(oof_paths):
 
 if __name__ == "__main__":
     # # Human readable model oofs
-    # oof_v1: deberta v3 large 1024
+    # oof_v1: deberta v3 large 1024 - cv 0.497
     # oof_v2: deberta v3 large 512
     # oof_v3: deberta v3 base 512
     # oof v4: roberta large 512
     # oof v5: electra large 512
     # oof v6: deberta v3 large 1800
-    # oof v7: deberta v3 large 1024 mse 
+    # oof v7: deberta v3 large 1024 mse - cv 0.495
     # oof v8: deberta large mnli 512 mcrmse
-    # oof v9: deberta v3 large 1024 mean pool
+    # oof v9: deberta v3 large 1024 mean pool - cv 0.495
+    # oof v10: deberta v3 large 1024 lstm pool
+    # oof v11: deberta v3 large 1024 cls pool - cv 0.479 - max position embeddings 1024 (max len)
+    # oof v12: deberta v3 large 1024 mean pool - cv 0.496 - max position embeddings 1024 (max len)
+    # oof v13: deberta v3 large 1024 concat pool - cv 0.485 - max position embeddings 1024 (max len)
     # OOF paths
     oof_paths = [
-        "../output/oof_v1.csv",
+        # "../output/oof_v1.csv",
         # "../output/oof_v2.csv",
         # "../output/oof_v3.csv",
         # "../output/oof_v4.csv",
         # "../output/oof_v5.csv",
-        "../output/oof_v7.csv",
+        # "../output/oof_v7.csv",
         # "../output/oof_v8.csv",
-        "../output/oof_v9.csv",
-        "../output/oof_v11.csv"
+        # "../output/oof_v9.csv",
+        "../output/oof_v11.csv",
+        # "../output/oof_v12.csv",
+        "../output/oof_v13.csv"
         # "../output/oof_v10.csv",
     ]
     best_params, best_scores, avg_score = main(oof_paths)

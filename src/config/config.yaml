@@ -5,7 +5,7 @@ hydra:
 train_summary_file: "../data/summaries_train.csv"
 train_prompt_file : "../data/prompts_train.csv"
 batch_size: 8
-valid_batch_size: 8
+valid_batch_size: 16
 epochs: 4
 lr: 2e-5
 max_len: 1800
