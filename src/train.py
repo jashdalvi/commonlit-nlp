@@ -708,44 +708,44 @@ def main(cfg: DictConfig):
     if cfg.train_whole_dataset:
         train_whole_dataset()
 
-    login(os.environ.get("HF_HUB_TOKEN"))
+    # login(os.environ.get("HF_HUB_TOKEN"))
 
-    api = HfApi()
-    cfg.repo_id = f"jashdalvi/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}"
-    # Creating a model repository in baseplate
-    create_repo(cfg.repo_id, private= True, exist_ok=True)
-    # Pushing the model to the hub
-    api.upload_folder(
-        folder_path = cfg.output_dir,
-        path_in_repo = "/",
-        repo_id = cfg.repo_id,
-        repo_type = "model"
-    )
+    # api = HfApi()
+    # cfg.repo_id = f"jashdalvi/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}"
+    # # Creating a model repository in baseplate
+    # create_repo(cfg.repo_id, private= True, exist_ok=True)
+    # # Pushing the model to the hub
+    # api.upload_folder(
+    #     folder_path = cfg.output_dir,
+    #     path_in_repo = "/",
+    #     repo_id = cfg.repo_id,
+    #     repo_type = "model"
+    # )
 
-    # Commenting out the kaggle api dataset upload code
-    subprocess.run(["kaggle", "datasets", "init", "-p", cfg.output_dir], check=True)
-    kaggle_dataset_metadata = {
-    "title": f"commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}",
-    "id": f"jashdalvi99/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", ""),
-    "licenses": [
-        {
-        "name": "CC0-1.0"
-        }
-    ]
-    }
-    # Overwriting the dataset metadata file
-    with open(os.path.join(cfg.output_dir, "dataset-metadata.json"), "w") as f:
-        json.dump(kaggle_dataset_metadata, f)
-    # Uploading the dataset to kaggle
-    subprocess.run(["kaggle", "datasets", "create", "-p", cfg.output_dir], check=True)
+    # # Commenting out the kaggle api dataset upload code
+    # subprocess.run(["kaggle", "datasets", "init", "-p", cfg.output_dir], check=True)
+    # kaggle_dataset_metadata = {
+    # "title": f"commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}",
+    # "id": f"jashdalvi99/commonlit-kaggle-{cfg.model_name.split(os.path.sep)[-1]}-cv-{cv:.4f}".replace(".", ""),
+    # "licenses": [
+    #     {
+    #     "name": "CC0-1.0"
+    #     }
+    # ]
+    # }
+    # # Overwriting the dataset metadata file
+    # with open(os.path.join(cfg.output_dir, "dataset-metadata.json"), "w") as f:
+    #     json.dump(kaggle_dataset_metadata, f)
+    # # Uploading the dataset to kaggle
+    # subprocess.run(["kaggle", "datasets", "create", "-p", cfg.output_dir], check=True)
 
-    # Deleting the output directory to save some space
-    shutil.rmtree(cfg.output_dir)
-    # Remove the local wandb dir to save some space
-    shutil.rmtree("wandb")
+    # # Deleting the output directory to save some space
+    # shutil.rmtree(cfg.output_dir)
+    # # Remove the local wandb dir to save some space
+    # shutil.rmtree("wandb")
 
 if __name__ == "__main__":
-    login(os.environ.get("HF_HUB_TOKEN"))
+    # login(os.environ.get("HF_HUB_TOKEN"))
     main()
 
 
