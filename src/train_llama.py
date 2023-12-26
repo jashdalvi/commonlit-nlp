@@ -653,6 +653,10 @@ def main(cfg: DictConfig):
         oof_df = df.copy()
         
         tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
+
+        # Update padding side and pad token id since it is a causal lm model
+        tokenizer.padding_side = "right"
+        tokenizer.pad_token_id = tokenizer.eos_token_id
         sep_token = tokenizer.sep_token
         
         for fold in [0,1,2,3]:
